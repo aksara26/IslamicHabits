@@ -2,7 +2,7 @@
 
 Aplikasi desktop Linux untuk mencatat ibadah harian secara pribadi. Dibuat untuk penggunaan sendiri, data tersimpan lokal, tanpa akun, tanpa server, dan didistribusikan lewat GitHub.
 
-> **Status:** versi 0.1.0 siap untuk uji pakai. Seluruh fitur v1 sudah tersedia: lapisan data SQLite, Hari Ini dengan catatan harian, Kelola Ibadah, Riwayat harian/tahunan, Kalender terpisah dengan detail capaian, Histori Catatan, Muhasabah, statistik, Pengaturan, pengingat popup, aksesibilitas dasar, ekspor/impor/cadangan, serta berkas pengemasan Flatpak dan AppImage. Palet sage kontras dan ikon kubah masjid sudah terpasang. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
+> **Status:** versi 0.1.0 siap untuk uji pakai. Seluruh fitur v1 sudah tersedia: lapisan data SQLite, Hari Ini dengan catatan harian, Kelola Ibadah, Riwayat harian/tahunan, Kalender terpisah dengan detail capaian, Histori Catatan, Muhasabah, statistik, Pengaturan, pengingat popup, aksesibilitas dasar, ekspor/impor/cadangan, serta berkas pengemasan Flatpak dan AppImage. Installer satu perintah dari Releases juga disiapkan. Palet sage kontras dan ikon kubah masjid sudah terpasang. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
 
 > **Panduan instalasi:** [`INSTALL.md`](INSTALL.md). Berkas ini fokus pada fitur, arsitektur, dan perilaku aplikasi.
 
@@ -195,6 +195,7 @@ IslamicHabits/
     ├── io.github.kurakura.IslamicHabits.json  # manifest Flatpak
     ├── AppRun                                 # peluncur AppImage
     ├── build-appimage.sh                      # pembuat AppImage
+    ├── install.sh                             # pemasang satu perintah tanpa sudo
     └── RELEASE.md                             # langkah rilis
 ```
 
@@ -576,9 +577,10 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 | Format | Kegunaan |
 |---|---|
-| **Flatpak** | Jalur utama yang disarankan untuk aplikasi GNOME; dapat dibagikan sebagai bundle di GitHub Releases |
+| **Installer satu perintah** | `curl ... \| bash` dari Releases; tanpa `sudo`, verifikasi checksum, pasang ke `~/.local` |
+| **Flatpak** | Jalur mandiri yang disarankan untuk aplikasi GNOME; dapat dibagikan sebagai bundle di GitHub Releases |
 | **Sumber (Meson)** | Pengembangan dan instalasi lokal |
-| **AppImage** | Opsional, satu berkas yang langsung dijalankan |
+| **AppImage** | Satu berkas yang juga dipakai installer di atas |
 
 Lisensi sudah ditetapkan: **GPL-3.0-or-later** (berkas `LICENSE`). `.gitignore` menyembunyikan data pengguna dan berkas build. Menerbitkan ke Flathub adalah langkah terpisah dan tidak wajib karena distribusi lewat GitHub Releases.
 

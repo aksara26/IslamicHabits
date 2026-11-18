@@ -5,17 +5,45 @@ IslamicHabits. Untuk daftar fitur, arsitektur, dan perilaku aplikasi, lihat
 [`README.md`](README.md). Bila Anda sedang menyiapkan paket rilis, lihat
 [`packaging/RELEASE.md`](packaging/RELEASE.md).
 
-## 1. Memilih cara instalasi
+## 1. Cara tercepat: satu perintah
+
+Bila rilis sudah tersedia di GitHub Releases, pemasangan cukup satu baris:
+
+```bash
+curl -fsSL https://github.com/kurakura/IslamicHabits/releases/latest/download/install.sh | bash
+```
+
+Tidak perlu `sudo`. Script ini mengunduh AppImage dan ikon terbaru, memeriksa
+checksum SHA256, lalu memasangnya untuk pengguna saat ini:
+
+- peluncur: `~/.local/bin/islamichabits`
+- AppImage: `~/.local/share/islamichabits/IslamicHabits-x86_64.AppImage`
+- ikon: `~/.local/share/icons/hicolor/scalable/apps/`
+- entri menu: `~/.local/share/applications/io.github.kurakura.IslamicHabits.desktop`
+
+Bila `islamichabits` belum dikenali, tambahkan `~/.local/bin` ke `PATH` dan buka
+terminal baru. Jalankan perintah yang sama untuk memperbarui ke rilis terbaru.
+
+Untuk mencopot pemasangan ini, hapus peluncur, folder AppImage, ikon, dan entri
+menu di atas. Data pengguna di `~/.local/share/io.github.kurakura.IslamicHabits/`
+tidak ikut terhapus.
+
+Catatan: AppImage memakai GTK4, libadwaita, dan PyGObject dari sistem host.
+Script akan mencoba menjalankan AppImage langsung, lalu memakai mode ekstrak bila
+FUSE tidak tersedia.
+
+## 2. Memilih cara instalasi
 
 | Format | Kegunaan |
 |---|---|
-| **Flatpak** | Jalur utama yang disarankan untuk aplikasi GNOME; dapat dibagikan sebagai bundle di GitHub Releases |
+| **Installer satu perintah** | Cara tercepat; mengunduh AppImage terbaru dari Releases tanpa `sudo` |
+| **Flatpak** | Jalur mandiri yang disarankan untuk aplikasi GNOME; dapat dibagikan sebagai bundle di GitHub Releases |
 | **Sumber (Meson)** | Pengembangan dan instalasi lokal |
-| **AppImage** | Opsional, satu berkas yang langsung dijalankan |
+| **AppImage** | Satu berkas yang juga dipakai installer di atas |
 
 ID aplikasi yang dipakai di semua jalur adalah `io.github.kurakura.IslamicHabits`.
 
-## 2. Dari sumber (Meson)
+## 3. Dari sumber (Meson)
 
 Cocok untuk mengubah kode sendiri. Dependensi di Fedora:
 
@@ -55,9 +83,9 @@ sudo ninja -C builddir uninstall
 ```
 
 Perintah uninstall tidak menghapus data pengguna. Hapus manual folder data bila
-memang ingin memulai dari kosong (lihat bagian 6).
+memang ingin memulai dari kosong (lihat bagian 7).
 
-## 3. Flatpak
+## 4. Flatpak
 
 Manifest ada di `packaging/io.github.kurakura.IslamicHabits.json` dan memakai
 runtime GNOME 51 sesuai target proyek.
@@ -108,7 +136,7 @@ flatpak uninstall --delete-data io.github.kurakura.IslamicHabits
 `@delete-data` hanya dipakai bila Anda memang ingin menghapus data aplikasi di
 `~/.var/app/io.github.kurakura.IslamicHabits/`.
 
-## 4. AppImage (opsional)
+## 5. AppImage (opsional)
 
 Unduh `IslamicHabits-x86_64.AppImage` dari halaman Releases, atau bangun sendiri:
 
@@ -139,7 +167,7 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
 `appimaged` atau launcher manual, hapus entri desktopnya juga. Data tetap ada di
 `~/.local/share/io.github.kurakura.IslamicHabits/`.
 
-## 5. Pertama kali menjalankan
+## 6. Pertama kali menjalankan
 
 1. Dialog pengenalan muncul sekali. Baca prinsipnya, lalu pilih **Mulai mencatat**.
 2. Ibadah bawaan (sholat fardhu, sunnah, tilawah, dzikir, dan lain-lain) sudah
@@ -173,7 +201,7 @@ lewat GNOME. Tombol **Uji notifikasi** mengirim satu popup contoh:
 - Versi Flatpak memakai ID `io.github.kurakura.IslamicHabits` dalam pengaturan
   notifikasi sistem.
 
-## 6. Lokasi data dan pencopotan
+## 7. Lokasi data dan pencopotan
 
 | Instalasi | Basis data | Cadangan bawaan |
 |---|---|---|
@@ -189,11 +217,12 @@ dari dalam aplikasi, gunakan **Pengaturan → Data → Hapus semua data**; ibada
 bawaan akan dikembalikan. Untuk menghapus folder data sepenuhnya, hapus manual
 jalur pada tabel di atas setelah membuat cadangan.
 
-## 7. Mendapatkan paket dari GitHub Releases
+## 8. Mendapatkan paket dari GitHub Releases
 
 - Kode berada di repositori, paket siap pakai berada di halaman Releases.
 - Workflow `.github/workflows/build.yml` menjalankan tes, membangun AppImage, dan
-  melampirkannya ke rilis saat tag `v*` di-push.
+  melampirkannya ke rilis saat tag `v*` di-push. Aset yang diunggah: AppImage,
+  `install.sh`, `SHA256SUMS`, dan ikon SVG.
 - Bundle Flatpak (`IslamicHabits.flatpak`) juga diunggah ke halaman Releases
   bila sudah dibangun.
 - Cara membangun paket dan menerbitkan rilis ada di

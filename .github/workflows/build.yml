@@ -29,6 +29,9 @@ jobs:
           meson setup builddir
           meson test -C builddir
 
+      - name: Uji sintaks installer
+        run: bash -n packaging/install.sh
+
       - name: Unduh appimagetool
         run: |
           curl -L -o /tmp/appimagetool \
@@ -40,14 +43,30 @@ jobs:
           APPIMAGETOOL: /tmp/appimagetool
         run: bash packaging/build-appimage.sh
 
+      - name: Siapkan aset rilis
+        run: |
+          cp packaging/install.sh install.sh
+          cp data/icons/hicolor/scalable/apps/io.github.kurakura.IslamicHabits.svg \
+            io.github.kurakura.IslamicHabits.svg
+          sha256sum IslamicHabits-x86_64.AppImage install.sh \
+            io.github.kurakura.IslamicHabits.svg > SHA256SUMS
+
       - name: Unggah artefak
         uses: actions/upload-artifact@v4
         with:
           name: islamichabits-appimage
-          path: IslamicHabits-x86_64.AppImage
+          path: |
+            IslamicHabits-x86_64.AppImage
+            install.sh
+            io.github.kurakura.IslamicHabits.svg
+            SHA256SUMS
 
       - name: Lampirkan ke rilis tag
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: IslamicHabits-x86_64.AppImage
+          files: |
+            IslamicHabits-x86_64.AppImage
+            install.sh
+            io.github.kurakura.IslamicHabits.svg
+            SHA256SUMS

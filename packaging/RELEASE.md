@@ -22,7 +22,9 @@ tabel `catatan_harian` dan tetap menerima berkas ekspor v1. Sertakan pula
 catatan bahwa popup pengingat memerlukan izin notifikasi sistem, sementara toast
 dalam aplikasi tetap menjadi cadangan. Sebutkan pula perubahan antarmuka pada rilis
 ini: navbar tujuh menu, Kalender terpisah dari Riwayat, halaman Histori Catatan,
-pintasan `Ctrl+4`, dan ikon kubah masjid bergaya sage.
+pintasan `Ctrl+4`, dan ikon kubah masjid bergaya sage. Workflow juga mengunggah
+`install.sh`, `SHA256SUMS`, dan ikon SVG supaya pengguna bisa memasang hanya dengan
+satu perintah `curl ... | bash` tanpa `sudo`.
 
 ## 2. Flatpak (utama)
 
@@ -59,10 +61,11 @@ lebih mandiri dan tetap disarankan untuk pengguna GNOME.
 ## 4. GitHub Releases
 
 1. Buat tag `v0.1.0` (sesuaikan nomor versi) dan push ke GitHub.
-2. Workflow `.github/workflows/build.yml` menjalankan tes, membangun AppImage,
-   lalu melampirkannya ke rilis tag.
+2. Workflow `.github/workflows/build.yml` menjalankan tes (termasuk `bash -n
+   packaging/install.sh`), membangun AppImage, lalu melampirkan AppImage,
+   `install.sh`, `SHA256SUMS`, dan ikon SVG ke rilis tag.
 3. Unggah pula `IslamicHabits.flatpak` bila sudah dibangun.
-4. Tulis catatan rilis singkat: fitur, perbaikan, dan tautan ke
-   [`INSTALL.md`](../INSTALL.md) untuk cara instalasi.
+4. Tulis catatan rilis singkat: fitur, perbaikan, perintah pemasangan satu baris,
+   dan tautan ke [`INSTALL.md`](../INSTALL.md) untuk cara instalasi.
 
 Menerbitkan ke Flathub adalah langkah terpisah dan tidak wajib.
