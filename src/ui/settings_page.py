@@ -60,6 +60,7 @@ class SettingsPage(Gtk.Box):
         self._on_theme_changed = on_theme_changed
         self._on_toast = on_toast
         self._on_data_changed = on_data_changed
+        self._refreshing = False
 
         self._build_page()
 
@@ -77,6 +78,27 @@ class SettingsPage(Gtk.Box):
         self._preferences.add(self._build_reminder_group())
         self._preferences.add(self._build_data_group())
         self._preferences.add(self._build_about_group())
+
+    def refresh(self) -> None:
+        """Muat ulang nilai setelah impor atau penghapusan data."""
+
+        self._refreshing = True
+        try:
+            theme = self._repo.get_setting(SETTING_THEME, THEME_KEYS[0])
+            try:
+                self._theme_row.set_selected(THEME_KEYS.index(theme))
+            except ValueError:
+                self._theme_row.set_selected(0)
+
+            self._reminder_switch.set_active(
+                self._repo.get_setting(SETTING_REMINDER_ENABLED, "0") == "1"
+            )
+            self._time_row.set_text(
+                self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
+            )
+            self._backup_row.set_subtitle(str(backup_folder(self._repo)))
+        finally:
+            self._refreshing = False
 
     def _build_display_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(title="Tampilan")
@@ -191,6 +213,8 @@ class SettingsPage(Gtk.Box):
     # -- tampilan & pengingat --------------------------------------------
 
     def _on_theme_selected(self, *_args: object) -> None:
+        if self._refreshing:
+            return
         index = self._theme_row.get_selected()
         if not 0 <= index < len(THEME_KEYS):
             return
@@ -199,19 +223,26 @@ class SettingsPage(Gtk.Box):
         self._on_theme_changed(theme)
 
     def _on_reminder_toggled(self, row: Adw.SwitchRow, *_args: object) -> None:
+        if self._refreshing:
+            return
         self._repo.set_setting(
             SETTING_REMINDER_ENABLED, "1" if row.get_active() else "0"
         )
 
     def _on_time_changed(self, row: Adw.EntryRow) -> None:
+        if self._refreshing:
+            return
         value = row.get_text().strip()
         try:
-            datetime.strptime(value, "%H:%M")
+            normalized = datetime.strptime(value, "%H:%M").strftime("%H:%M")
         except ValueError:
             row.add_css_class("error")
             return
         row.remove_css_class("error")
-        self._repo.set_setting(SETTING_REMINDER_TIME, value)
+        if value != normalized:
+            row.set_text(normalized)
+            return
+        self._repo.set_setting(SETTING_REMINDER_TIME, normalized)
 
     # -- ekspor & cadangan ------------------------------------------------
 

@@ -62,12 +62,22 @@ def _format_day(day: date) -> str:
     return f"{HARI[day.weekday()]}, {day.day} {BULAN[day.month - 1]} {day.year}"
 
 
+def _last_day(year: int, month: int) -> int:
+    if month == 12:
+        return (date(year + 1, 1, 1) - timedelta(days=1)).day
+    return (date(year, month + 1, 1) - timedelta(days=1)).day
+
+
 def _shift_month(day: date, months: int) -> date:
     total = day.year * 12 + (day.month - 1) + months
     year, month_index = divmod(total, 12)
     month = month_index + 1
-    last = (date(year + 1, 1, 1) - timedelta(days=1)) if month == 12 else date(year, month + 1, 1) - timedelta(days=1)
-    return date(year, month, min(day.day, last.day))
+    return date(year, month, min(day.day, _last_day(year, month)))
+
+
+def _shift_year(day: date, years: int) -> date:
+    year = day.year + years
+    return day.replace(year=year, day=min(day.day, _last_day(year, day.month)))
 
 
 class HistoryPage(Gtk.Box):
@@ -327,7 +337,7 @@ class HistoryPage(Gtk.Box):
             self._anchor = _shift_month(self._anchor, direction)
             self._day = self._anchor
         else:
-            self._anchor = self._anchor.replace(year=self._anchor.year + direction)
+            self._anchor = _shift_year(self._anchor, direction)
         self.refresh()
 
     def _on_filter_changed(self, *_args: object) -> None:

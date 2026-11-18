@@ -68,6 +68,7 @@ class TrendLine(Gtk.DrawingArea):
 
         self.set_hexpand(True)
         self.set_content_height(160)
+        self.set_focusable(True)
         self.set_accessible_role(Gtk.AccessibleRole.IMG)
         self.set_tooltip_text("Garis tren tahunan")
 
@@ -135,7 +136,7 @@ class TrendLine(Gtk.DrawingArea):
         _data: object,
     ) -> None:
         padding = 18.0
-        color = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        color = self.get_color()
 
         # Garis dasar yang sangat halus.
         cr.set_source_rgba(color.red, color.green, color.blue, 0.25)

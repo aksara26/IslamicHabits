@@ -334,10 +334,7 @@ class MuhasabahPage(Gtk.Box):
         answers = self._buffer_text(self._answers_view)
         if not text.strip() and not answers.strip():
             # Hapus baris kosong supaya daftar tidak penuh entri kosong.
-            self._repo.connection.execute(
-                "DELETE FROM muhasabah WHERE tanggal = ?", (self._day.isoformat(),)
-            )
-            self._repo.connection.commit()
+            self._repo.delete_muhasabah(self._day)
         else:
             self._repo.save_muhasabah(self._day, text, answers)
         self._save_status.set_label("Tersimpan otomatis")

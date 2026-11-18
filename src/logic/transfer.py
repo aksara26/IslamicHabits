@@ -184,6 +184,29 @@ def _check_date(value: Any, field: str, *, optional: bool = False) -> None:
         raise TransferError(f"{field} bukan tanggal ISO yang valid") from error
 
 
+def _check_int(value: Any, field: str, *, optional: bool = False) -> None:
+    if value is None and optional:
+        return
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TransferError(f"{field} harus berupa bilangan bulat")
+
+
+def _check_number(value: Any, field: str, *, optional: bool = False) -> None:
+    if value is None and optional:
+        return
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise TransferError(f"{field} harus berupa angka")
+    if value < 0:
+        raise TransferError(f"{field} tidak boleh negatif")
+
+
+def _check_text(value: Any, field: str, *, optional: bool = False) -> None:
+    if value is None and optional:
+        return
+    if not isinstance(value, str):
+        raise TransferError(f"{field} harus berupa teks")
+
+
 def validate_payload(payload: Any) -> None:
     """Validasi struktural sebelum data apa pun disentuh."""
 
@@ -216,10 +239,27 @@ def validate_payload(payload: Any) -> None:
             missing = set(COLUMNS[table]) - set(row)
             if missing:
                 raise TransferError(f"Baris {table} kehilangan kolom: {', '.join(sorted(missing))}")
+            for column in PRIMARY_KEYS[table]:
+                if column in {"kunci", "tanggal"}:
+                    _check_text(row[column], f"{table}.{column}")
+                else:
+                    _check_int(row[column], f"{table}.{column}")
             key = tuple(row[column] for column in PRIMARY_KEYS[table])
             if key in seen[table]:
                 raise TransferError(f"Kunci ganda pada tabel {table}: {key}")
             seen[table].add(key)
+
+    for row in data["kategori"]:
+        _check_text(row["nama"], "kategori.nama")
+        _check_int(row["urutan"], "kategori.urutan")
+        _check_int(row["lipat"], "kategori.lipat")
+
+    for row in data["ibadah"]:
+        _check_text(row["nama"], "ibadah.nama")
+        _check_int(row["urutan"], "ibadah.urutan")
+        _check_int(row["kategori_id"], "ibadah.kategori_id", optional=True)
+        _check_number(row["target"], "ibadah.target", optional=True)
+        _check_text(row["satuan"], "ibadah.satuan")
 
     for row in data["ibadah"]:
         if row["jenis"] not in {"centang", "angka", "status"}:
@@ -237,6 +277,11 @@ def validate_payload(payload: Any) -> None:
     worship_ids = {item["id"] for item in data["ibadah"]}
     for row in data["catatan"]:
         _check_date(row["tanggal"], "tanggal")
+        _check_int(row["nilai_bool"], "catatan.nilai_bool", optional=True)
+        _check_number(row["nilai_angka"], "catatan.nilai_angka", optional=True)
+        _check_text(row["nilai_status"], "catatan.nilai_status", optional=True)
+        _check_text(row["jam"], "catatan.jam", optional=True)
+        _check_text(row["catatan"], "catatan.catatan", optional=True)
         if row["ibadah_id"] not in worship_ids:
             raise TransferError("Catatan merujuk ke ibadah yang tidak ada")
         if row["nilai_status"] is not None and row["nilai_status"] not in {
@@ -246,6 +291,12 @@ def validate_payload(payload: Any) -> None:
 
     for row in data["muhasabah"]:
         _check_date(row["tanggal"], "tanggal")
+        _check_text(row["teks"], "muhasabah.teks")
+        _check_text(row["jawaban"], "muhasabah.jawaban")
+
+    for table in ("pengaturan", "meta"):
+        for row in data[table]:
+            _check_text(row["nilai"], f"{table}.nilai")
 
 
 def _key_of(table: str, row: dict[str, Any]) -> tuple[Any, ...]:

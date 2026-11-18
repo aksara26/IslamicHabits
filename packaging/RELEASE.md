@@ -5,8 +5,9 @@ Semua perintah dijalankan dari folder proyek.
 ## 1. Pastikan versi sudah tepat
 
 Ubah `APP_VERSION` di `src/logic/constants.py`, `version` di `meson.build`, dan
-`Version` di `data/io.github.kurakura.IslamicHabits.metainfo.xml` dengan nomor
-yang sama. Jalankan tes sebelum melanjutkan:
+atribut `version` pada elemen `<release>` di
+`data/io.github.kurakura.IslamicHabits.metainfo.xml` dengan nomor yang sama.
+Jalankan tes sebelum melanjutkan:
 
 ```bash
 python3 -m unittest discover -s tests -q

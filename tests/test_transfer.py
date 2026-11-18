@@ -185,6 +185,27 @@ class TransferTests(unittest.TestCase):
         with self.assertRaises(TransferError):
             validate_payload(payload)
 
+    def test_wrong_numeric_types_are_rejected(self) -> None:
+        payload = self._sample_payload()
+        payload["data"]["ibadah"][0]["id"] = "200"
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+        payload = self._sample_payload()
+        payload["data"]["ibadah"][0]["target"] = "abc"
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+        payload = self._sample_payload()
+        payload["data"]["catatan"][0]["nilai_angka"] = "dua"
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+        payload = self._sample_payload()
+        payload["data"]["muhasabah"][0]["teks"] = 42
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
     # -- pratinjau dan impor ---------------------------------------------
 
     def test_preview_counts_new_and_conflicts(self) -> None:

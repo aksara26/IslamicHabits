@@ -23,12 +23,14 @@ class IslamicHabitsApplication(Adw.Application):
     """Aplikasi GNOME satu jendela."""
 
     repository: Repository
+    startup_notice: str | None
 
     def __init__(self) -> None:
         super().__init__(
             application_id=APP_ID,
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
         )
+        self.startup_notice = None
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
@@ -39,10 +41,13 @@ class IslamicHabitsApplication(Adw.Application):
         load_stylesheet()
         try:
             maybe_backup(self.repository)
-        except OSError:
-            # Cadangan bukan syarat aplikasi dibuka; pengguna bisa mengulang
-            # dari Pengaturan saat folder tersedia.
-            pass
+        except OSError as error:
+            # Cadangan bukan syarat aplikasi dibuka. Catatan ini ditampilkan
+            # sekali setelah jendela tersedia.
+            self.startup_notice = (
+                f"Cadangan otomatis tidak tersimpan: {error}. "
+                "Pilih folder cadangan di Pengaturan bila perlu."
+            )
 
         quit_action = Gio.SimpleAction.new("quit", None)
         quit_action.connect("activate", lambda *_action: self.quit())
@@ -66,6 +71,9 @@ class IslamicHabitsApplication(Adw.Application):
         if window is None:
             window = MainWindow(application=self, repository=self.repository)
         window.present()
+        if self.startup_notice is not None:
+            window.show_startup_notice(self.startup_notice)
+            self.startup_notice = None
 
     def do_shutdown(self) -> None:
         if hasattr(self, "repository"):

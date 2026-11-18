@@ -17,6 +17,7 @@ from ..logic.constants import (
     META_ONBOARDING_DONE,
     SETTING_REMINDER_ENABLED,
     SETTING_REMINDER_TIME,
+    SETTING_THEME,
 )
 from ..logic.repository import Repository
 from .a11y import set_accessible_label
@@ -77,6 +78,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._on_page_changed()
 
         GLib.idle_add(self._show_onboarding_if_needed)
+        self._check_reminder()
         GLib.timeout_add_seconds(60, self._check_reminder)
 
     # -- konstruksi ------------------------------------------------------
@@ -185,7 +187,7 @@ class MainWindow(Adw.ApplicationWindow):
             self._repo,
             on_add_worship=self.open_worship_dialog,
             on_toast=self._toast,
-            on_data_changed=self.refresh_history,
+            on_data_changed=self.refresh_today_and_history,
         )
 
     def _make_settings_page(self):
@@ -219,11 +221,16 @@ class MainWindow(Adw.ApplicationWindow):
     def refresh_history(self) -> None:
         self._history_page.refresh()
 
-    def refresh_all(self) -> None:
+    def refresh_today_and_history(self) -> None:
         self._today_page.refresh()
-        self._manage_page.refresh()
         self._history_page.refresh()
+
+    def refresh_all(self) -> None:
+        self.refresh_today_and_history()
+        self._manage_page.refresh()
         self._muhasabah_page.refresh()
+        self._settings_page.refresh()
+        apply_theme(self._repo.get_setting(SETTING_THEME, "sistem"))
 
     def _hide_sidebar_when_collapsed(self) -> None:
         if self._split.get_collapsed():
@@ -276,6 +283,12 @@ class MainWindow(Adw.ApplicationWindow):
             if button_label == "Urungkan":
                 self._undo_callback = callback
 
+                def on_dismissed(*_args: object) -> None:
+                    if self._undo_callback is callback:
+                        self._undo_callback = None
+
+                toast.connect("dismissed", on_dismissed)
+
             def on_button_clicked(*_args: object) -> None:
                 callback()
                 self._undo_callback = None
@@ -283,6 +296,11 @@ class MainWindow(Adw.ApplicationWindow):
             toast.set_button_label(button_label)
             toast.connect("button-clicked", on_button_clicked)
         self._toast_overlay.add_toast(toast)
+
+    def show_startup_notice(self, message: str) -> None:
+        """Tampilkan catatan dari startup setelah jendela tersedia."""
+
+        self._toast(message, None, None)
 
     # -- pengenalan dan pengingat -----------------------------------------
 
@@ -315,19 +333,23 @@ class MainWindow(Adw.ApplicationWindow):
             return True
         target = self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
         try:
-            datetime.strptime(target, "%H:%M")
+            target = datetime.strptime(target, "%H:%M").strftime("%H:%M")
         except ValueError:
             return True
 
         now = datetime.now()
-        if now.strftime("%H:%M") == target and self._reminder_day != now.date():
+        if now.strftime("%H:%M") >= target and self._reminder_day != now.date():
             self._reminder_day = now.date()
             self._toast(
                 "Waktunya mencatat ibadah dan menulis muhasabah.",
                 "Buka Muhasabah",
-                lambda: self.go_page("muhasabah"),
+                self._open_muhasabah_today,
             )
         return True
+
+    def _open_muhasabah_today(self) -> None:
+        self._muhasabah_page.go_today()
+        self.go_page("muhasabah")
 
     def _show_shortcuts(self) -> None:
         dialog = Adw.ShortcutsDialog()

@@ -61,7 +61,7 @@ class WorshipRow(Adw.ActionRow):
         detail_button = Gtk.Button.new_from_icon_name("document-edit-symbolic")
         detail_button.set_tooltip_text("Detail, jam, dan catatan")
         _set_accessible_label(detail_button, f"Detail {worship.name}")
-        detail_button.get_style_context().add_class("flat")
+        detail_button.add_css_class("flat")
         detail_button.connect("clicked", self._on_detail_clicked)
         self.add_suffix(detail_button)
 
@@ -143,8 +143,6 @@ class WorshipRow(Adw.ActionRow):
             return
         amount = spin.get_value()
         value: EntryValue = int(amount) if amount.is_integer() else amount
-        if amount <= 0:
-            value = None
         self._on_value_changed(self.worship.id, value)
 
     def _on_status_changed(self, dropdown: Gtk.DropDown, _param: object) -> None:
@@ -159,6 +157,11 @@ class WorshipRow(Adw.ActionRow):
         self._on_details(self.worship)
 
     # -- API -------------------------------------------------------------
+
+    def focus_value(self) -> None:
+        """Kembalikan fokus ke widget isian utama baris ini."""
+
+        self._value_widget.grab_focus()
 
     def refresh(self, entry: EntryRecord | None) -> None:
         """Sinkronkan widget setelah data ditulis ulang dari luar."""

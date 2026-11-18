@@ -155,6 +155,7 @@ class TodayPage(Gtk.Box):
         self._on_data_changed = on_data_changed
         self.day = date.today()
         self._known_today = date.today()
+        self._rows: dict[int, "WorshipRow"] = {}
 
         self._build_navigation()
         self._build_day_change_notice()
@@ -271,7 +272,19 @@ class TodayPage(Gtk.Box):
 
     # -- penyegaran ------------------------------------------------------
 
+    def _focused_worship_id(self) -> int | None:
+        widget = self
+        while widget is not None:
+            if hasattr(widget, "worship"):
+                return int(widget.worship.id)
+            child = widget.get_focus_child()
+            if child is None:
+                return None
+            widget = child
+        return None
+
     def refresh(self) -> None:
+        focused_id = self._focused_worship_id()
         self._date_label.set_label(_format_day(self.day))
         if self.day > date.today():
             self._context_label.set_label("Hari depan — pencatatan dibatasi")
@@ -296,6 +309,7 @@ class TodayPage(Gtk.Box):
             if is_active(worship, self.day)
         ]
 
+        self._rows.clear()
         if not active:
             empty = Adw.StatusPage(
                 title="Belum ada ibadah",
@@ -340,6 +354,8 @@ class TodayPage(Gtk.Box):
             group.append(expander)
 
         self._scrolled.set_child(group)
+        if focused_id is not None and focused_id in self._rows:
+            GLib.idle_add(self._rows[focused_id].focus_value)
 
     def _create_row(self, worship: WorshipRecord, entry: EntryRecord | None):
         from .worship_row import WorshipRow
@@ -351,6 +367,7 @@ class TodayPage(Gtk.Box):
             on_details=self._on_details,
         )
         row.set_sensitive(self.day <= date.today())
+        self._rows[worship.id] = row
         return row
 
     def _on_value_changed(self, worship_id: int, value) -> None:

@@ -101,7 +101,7 @@ Kerangka awal sudah diuji dengan **Python 3.15.2** dan **GTK 4.24**: impor `gi` 
 Dependensi GTK4, libadwaita, dan PyGObject sebagian besar adalah **paket sistem**, bukan paket pip. Paket yang umum dibutuhkan proyek sejenis di Fedora:
 
 ```bash
-sudo dnf install meson ninja-build python3 python3-gobject gtk4 libadwaita \
+sudo dnf install meson ninja-build python3 python3-gobject python3-cairo gtk4 libadwaita \
   gtk4-devel libadwaita-devel glib2-devel desktop-file-utils appstream gettext
 ```
 
@@ -178,7 +178,8 @@ IslamicHabits/
 │   ├── test_statistics.py
 │   ├── test_database.py
 │   ├── test_repository.py
-│   └── test_transfer.py
+│   ├── test_transfer.py
+│   └── test_ui_smoke.py
 └── packaging/
     ├── io.github.kurakura.IslamicHabits.json  # manifest Flatpak
     ├── AppRun                                 # peluncur AppImage
@@ -188,9 +189,9 @@ IslamicHabits/
 
 ### Lokasi penyimpanan data
 
-Data disimpan di folder data pengguna standar Linux, yaitu `$XDG_DATA_HOME/islamichabits/islamichabits.sqlite3` atau `~/.local/share/islamichabits/islamichabits.sqlite3` bila `XDG_DATA_HOME` tidak diatur. Cadangan awal ada di `.../islamichabits/backups/` dan bisa diubah lewat Pengaturan.
+Data disimpan di folder data pengguna standar Linux, yaitu `$XDG_DATA_HOME/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` atau `~/.local/share/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` bila `XDG_DATA_HOME` tidak diatur. Cadangan awal ada di `.../io.github.kurakura.IslamicHabits/backups/` dan bisa diubah lewat Pengaturan.
 
-Pada Flatpak lokasinya berbeda, yaitu `~/.var/app/io.github.kurakura.IslamicHabits/data/islamichabits/`. Karena itu aplikasi **mengambil lokasi dari sistem**, tidak memakai jalur tetap. Halaman Pengaturan menampilkan lokasi ini dan tombol untuk membuka foldernya.
+Pada Flatpak lokasinya berbeda, yaitu `~/.var/app/io.github.kurakura.IslamicHabits/data/io.github.kurakura.IslamicHabits/`. Karena itu aplikasi **mengambil lokasi dari sistem**, tidak memakai jalur tetap. Halaman Pengaturan menampilkan lokasi ini dan tombol untuk membuka foldernya.
 
 ### Identitas aplikasi
 
@@ -493,8 +494,8 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 ## 15. Pengujian
 
-- **Logika** (statistik, hari aktif, ekspor/impor, cadangan) diuji tanpa antarmuka: 47 pengujian lolos dengan `python3 -m unittest discover -s tests -q`
-- **Migrasi skema** diuji dengan data versi lama
+- **Logika** (statistik, hari aktif, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: 50 pengujian lolos dengan `python3 -m unittest discover -s tests -q`
+- **Versi skema** divalidasi; v1 belum memerlukan jalur migrasi karena skema awal belum berubah
 - **Kasus tepi:**
   - Pergantian tengah malam saat aplikasi terbuka
   - Mengisi hari lampau dan hari depan
@@ -521,7 +522,7 @@ Lisensi sudah ditetapkan: **GPL-3.0-or-later** (berkas `LICENSE`). `.gitignore` 
 Cocok untuk mengubah kode sendiri. Dependensi di Fedora:
 
 ```bash
-sudo dnf install meson ninja-build python3 python3-gobject gtk4 libadwaita \
+sudo dnf install meson ninja-build python3 python3-gobject python3-cairo gtk4 libadwaita \
   gtk4-devel libadwaita-devel glib2-devel desktop-file-utils appstream
 ```
 
@@ -629,7 +630,7 @@ chmod +x IslamicHabits-x86_64.AppImage
 
 AppImage memakai Python, GTK4, dan libadwaita dari sistem host. Jadi paket ini praktis sebagai satu berkas, tetapi **Flatpak lebih mandiri**. Simpan ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
 
-**Mencopot:** hapus berkas `.AppImage`. Bila dulu mengintegrasikan dengan `appimaged` atau launcher manual, hapus entri desktopnya juga. Data tetap ada di `~/.local/share/islamichabits/`.
+**Mencopot:** hapus berkas `.AppImage`. Bila dulu mengintegrasikan dengan `appimaged` atau launcher manual, hapus entri desktopnya juga. Data tetap ada di `~/.local/share/io.github.kurakura.IslamicHabits/`.
 
 ### 16.4 Pertama kali menjalankan
 
@@ -645,8 +646,8 @@ Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
 
 | Instalasi | Basis data | Cadangan bawaan |
 |---|---|---|
-| Sumber / AppImage | `$XDG_DATA_HOME/islamichabits/islamichabits.sqlite3` atau `~/.local/share/islamichabits/islamichabits.sqlite3` | `.../islamichabits/backups/` |
-| Flatpak | `~/.var/app/io.github.kurakura.IslamicHabits/data/islamichabits/islamichabits.sqlite3` | `.../data/islamichabits/backups/` |
+| Sumber / AppImage | `$XDG_DATA_HOME/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` atau `~/.local/share/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../io.github.kurakura.IslamicHabits/backups/` |
+| Flatpak | `~/.var/app/io.github.kurakura.IslamicHabits/data/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../data/io.github.kurakura.IslamicHabits/backups/` |
 
 Halaman **Pengaturan → Data → Lokasi data** menampilkan jalur ini dan tombol **Buka folder**. Folder cadangan bisa diubah ke lokasi lain.
 
@@ -677,7 +678,7 @@ Mencopot aplikasi tidak otomatis menghapus data. Ini disengaja agar data tetap a
 - [x] 12. Pengenalan, aksesibilitas, pemolesan
 - [x] 13. Pengemasan dan rilis di GitHub (aset dan workflow sudah disiapkan; unggah rilis dilakukan lewat GitHub)
 
-**Status akhir:** seluruh langkah 1–13 selesai. 47 pengujian logika/data lolos, pembuatan objek UI lolos secara headless, dan instalasi Meson berhasil. Uji visual di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
+**Status akhir:** seluruh langkah 1–13 selesai. 50 pengujian (logika/data dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Uji visual di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
 
 ---
 

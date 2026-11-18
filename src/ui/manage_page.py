@@ -157,7 +157,7 @@ class ManagePage(Gtk.Box):
         button = Gtk.Button.new_from_icon_name(icon)
         button.set_tooltip_text(label)
         set_accessible_label(button, label)
-        button.get_style_context().add_class("flat")
+        button.add_css_class("flat")
         button.connect("clicked", callback)
         return button
 

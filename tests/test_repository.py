@@ -152,6 +152,10 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(saved.text, "Hari ini cukup tenang.")
         self.assertEqual(saved.answers, "hadir")
 
+        self.repo.delete_muhasabah(DAY)
+        self.assertEqual(self.repo.get_muhasabah(DAY).text, "")
+        self.assertEqual(self.repo.list_muhasabah(), ())
+
         self.assertEqual(self.repo.get_setting("tema", "sistem"), "sistem")
         self.repo.set_setting("tema", "gelap")
         self.assertEqual(self.repo.get_setting("tema"), "gelap")

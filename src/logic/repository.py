@@ -515,6 +515,14 @@ class Repository:
         )
         self._db.commit()
 
+    def delete_muhasabah(self, day: date | str) -> None:
+        """Hapus satu baris muhasabah yang sudah kosong."""
+
+        self._db.execute(
+            "DELETE FROM muhasabah WHERE tanggal = ?", (_to_iso(day),)
+        )
+        self._db.commit()
+
     def clear_all_data(self) -> None:
         """Hapus semua data pengguna, lalu kembalikan ibadah bawaan.
 
