@@ -25,14 +25,13 @@ meson setup "$BUILD_DIR/build" --prefix=/usr
 DESTDIR="$APPDIR" meson install -C "$BUILD_DIR/build"
 
 install -m 0755 "$ROOT/packaging/AppRun" "$APPDIR/AppRun"
-install -Dm0644 "$ROOT/data/$APP_ID.desktop" \
-  "$APPDIR/usr/share/applications/$APP_ID.desktop"
 install -Dm0644 "$ROOT/data/icons/hicolor/scalable/apps/$APP_ID.svg" \
   "$APPDIR/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 install -m0644 "$ROOT/data/icons/hicolor/scalable/apps/$APP_ID.svg" \
   "$APPDIR/$APP_ID.svg"
-# appimagetool mencari berkas .desktop di akar AppDir.
-install -m0644 "$ROOT/data/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
+# appimagetool mencari berkas .desktop di akar AppDir. Pakai berkas hasil
+# konfigurasi Meson agar Exec memakai jalur absolut di dalam AppImage.
+install -m0644 "$BUILD_DIR/build/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
 
 # AppDir tidak punya direktori spesifik arsitektur, jadi tentukan eksplisit.
 export ARCH="${ARCH:-x86_64}"

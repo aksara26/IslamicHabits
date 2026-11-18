@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=IslamicHabits
+GenericName=Pelacak Ibadah
+Comment=Catat ibadah harian secara lokal, cepat, dan tenang
+Exec=@bindir@/islamichabits
+Icon=io.github.kurakura.IslamicHabits
+Terminal=false
+Type=Application
+Categories=GTK;Utility;
+StartupNotify=true
+Keywords=ibadah;sholat;tilawah;dzikir;puasa;

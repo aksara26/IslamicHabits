@@ -60,8 +60,16 @@ install_data(
   install_mode: 'rwxr-xr-x',
 )
 
+desktop_conf = configuration_data()
+desktop_conf.set('bindir', bindir)
+desktop_file = configure_file(
+  input: 'data/' + app_id + '.desktop.in',
+  output: app_id + '.desktop',
+  configuration: desktop_conf,
+)
+
 install_data(
-  'data/' + app_id + '.desktop',
+  desktop_file,
   install_dir: join_paths(datadir, 'applications'),
 )
 install_data(
