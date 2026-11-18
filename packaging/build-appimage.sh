@@ -31,6 +31,11 @@ install -Dm0644 "$ROOT/data/icons/hicolor/scalable/apps/$APP_ID.svg" \
   "$APPDIR/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 install -m0644 "$ROOT/data/icons/hicolor/scalable/apps/$APP_ID.svg" \
   "$APPDIR/$APP_ID.svg"
+# appimagetool mencari berkas .desktop di akar AppDir.
+install -m0644 "$ROOT/data/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
+
+# AppDir tidak punya direktori spesifik arsitektur, jadi tentukan eksplisit.
+export ARCH="${ARCH:-x86_64}"
 
 # appimagetool lebih yakin dengan PNG di akar AppDir bila tersedia.
 if command -v rsvg-convert >/dev/null 2>&1; then
