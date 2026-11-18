@@ -29,12 +29,14 @@ WorshipCallback = Callable[[int], None]
 
 _KIND_TITLE = {
     "memo": "Memo harian",
+    "reminder": "Pengingat",
     "muhasabah": "Muhasabah",
     "entry": "Catatan ibadah",
     "worship": "Ibadah & kebiasaan",
 }
 _KIND_ICON = {
     "memo": "text-x-generic-symbolic",
+    "reminder": "appointment-soon-symbolic",
     "muhasabah": "document-edit-symbolic",
     "entry": "view-list-symbolic",
     "worship": "checkbox-checked-symbolic",
@@ -176,7 +178,7 @@ class SearchPopover(Gtk.Popover):
             return
         if hit.day is None:
             return
-        if hit.kind == "memo":
+        if hit.kind in {"memo", "reminder"}:
             self._on_open_memo(hit.day)
         elif hit.kind == "muhasabah":
             self._on_open_muhasabah(hit.day)

@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from src.logic.database import connect
-from src.logic.repository import DailyNoteRecord, Repository
+from src.logic.repository import DailyNoteRecord, ReminderRecord, Repository
 from src.logic.statistics import EntryKind, StatusValue, compute_daily, compute_range
 
 DAY = date(2026, 11, 18)
@@ -190,6 +190,44 @@ class RepositoryTests(unittest.TestCase):
         self.repo.clear_all_data()
         self.assertEqual(self.repo.list_daily_notes(), ())
 
+    def test_reminders_are_saved_listed_and_deleted(self) -> None:
+        self.assertEqual(self.repo.get_reminder(DAY), ReminderRecord(DAY, ""))
+
+        self.repo.save_reminder(DAY, "  Minum air  ", "07:30")
+        self.assertEqual(
+            self.repo.get_reminder(DAY),
+            ReminderRecord(DAY, "Minum air", "07:30"),
+        )
+
+        previous = DAY - timedelta(days=1)
+        self.repo.save_reminder(previous, "Baca buku", "20:00")
+        reminders = self.repo.list_reminders(
+            start=previous, end=DAY + timedelta(days=1)
+        )
+        self.assertEqual([item.day for item in reminders], [DAY, previous])
+
+        self.repo.mark_reminder_sent(DAY)
+        self.assertTrue(self.repo.get_reminder(DAY).sent)
+
+        # Mengubah jam mengembalikan status terkirim agar notifikasi baru
+        # tetap bisa muncul pada jam yang baru.
+        self.repo.save_reminder(DAY, "Minum air", "08:15")
+        self.assertFalse(self.repo.get_reminder(DAY).sent)
+        self.assertEqual(self.repo.get_reminder(DAY).time, "08:15")
+
+        with self.assertRaises(ValueError):
+            self.repo.save_reminder(DAY, "Jam salah", "25:00")
+
+        self.repo.save_reminder(DAY, "   ")
+        self.assertEqual(self.repo.get_reminder(DAY).text, "")
+        self.repo.delete_reminder(previous)
+        self.assertEqual(self.repo.list_reminders(), ())
+
+    def test_clear_all_data_removes_reminders(self) -> None:
+        self.repo.save_reminder(DAY, "Pengingat yang harus hilang", "06:00")
+        self.repo.clear_all_data()
+        self.assertEqual(self.repo.list_reminders(), ())
+
     def test_photo_memo_is_copied_listed_and_deleted(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             folder_path = Path(folder)
@@ -257,6 +295,7 @@ class RepositoryTests(unittest.TestCase):
             active_from=date(2026, 11, 1),
         )
         self.repo.save_daily_note(DAY, "Syukur pagi ini")
+        self.repo.save_reminder(DAY, "Minum air", "07:30")
         self.repo.save_muhasabah(DAY, "Refleksi sabar", "Jawaban syukur")
         self.repo.set_entry(worship.id, DAY, value=True, note="Tepat waktu")
 
@@ -275,6 +314,12 @@ class RepositoryTests(unittest.TestCase):
         worship_hits = self.repo.search_all("sub")
         self.assertEqual(worship_hits[0].kind, "worship")
         self.assertEqual(worship_hits[0].worship_id, worship.id)
+
+        reminder_hits = self.repo.search_all("minum")
+        self.assertEqual(len(reminder_hits), 1)
+        self.assertEqual(reminder_hits[0].kind, "reminder")
+        self.assertIn("07:30", reminder_hits[0].title)
+        self.assertEqual(reminder_hits[0].day, DAY)
 
         self.assertEqual(self.repo.search_all("tidak ada"), ())
 

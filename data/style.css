@@ -303,6 +303,15 @@ button.ih-photo-remove:hover {
   box-shadow: 0 0 0 1px alpha(@ih-accent, 0.35);
 }
 
+/* Pratinjau memo di dialog kalender memakai bidang lembut supaya teks memo
+ * tetap terbedakan dari kartu dan dari editor yang bisa diketik. */
+.ih-memo-preview {
+  background-color: alpha(@ih-sage, 0.04);
+  border: 1px solid @ih-line;
+  border-radius: 10px;
+  padding: 10px;
+}
+
 .ih-page-date {
   color: @ih-ink;
   font-weight: 700;

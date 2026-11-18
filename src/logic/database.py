@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS memo_foto (
     dibuat_pada TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS pengingat_harian (
+    tanggal TEXT PRIMARY KEY,
+    teks TEXT NOT NULL DEFAULT '',
+    jam TEXT NOT NULL DEFAULT '',
+    terkirim INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS pengaturan (
     kunci TEXT PRIMARY KEY,
     nilai TEXT NOT NULL
@@ -95,7 +102,8 @@ CREATE INDEX IF NOT EXISTS idx_memo_foto_tanggal ON memo_foto(tanggal, urutan);
 """
 
 # Ditambah satu entri per versi skema baru. Versi 1 dibuat oleh skema awal;
-# versi 2 menambahkan catatan harian; versi 3 menambahkan foto memo.
+# versi 2 menambahkan catatan harian; versi 3 menambahkan foto memo;
+# versi 4 menambahkan pengingat per tanggal yang terpisah dari memo.
 MIGRATIONS: dict[int, str] = {
     2: """
     CREATE TABLE IF NOT EXISTS catatan_harian (
@@ -113,6 +121,14 @@ MIGRATIONS: dict[int, str] = {
         dibuat_pada TEXT NOT NULL DEFAULT ''
     );
     CREATE INDEX IF NOT EXISTS idx_memo_foto_tanggal ON memo_foto(tanggal, urutan);
+    """,
+    4: """
+    CREATE TABLE IF NOT EXISTS pengingat_harian (
+        tanggal TEXT PRIMARY KEY,
+        teks TEXT NOT NULL DEFAULT '',
+        jam TEXT NOT NULL DEFAULT '',
+        terkirim INTEGER NOT NULL DEFAULT 0
+    );
     """,
 }
 

@@ -52,6 +52,7 @@ TABLES = (
     "muhasabah",
     "catatan_harian",
     "memo_foto",
+    "pengingat_harian",
     "pengaturan",
     "meta",
 )
@@ -82,6 +83,7 @@ COLUMNS: dict[str, tuple[str, ...]] = {
     "muhasabah": ("tanggal", "teks", "jawaban"),
     "catatan_harian": ("tanggal", "teks"),
     "memo_foto": ("id", "tanggal", "berkas", "keterangan", "urutan", "dibuat_pada"),
+    "pengingat_harian": ("tanggal", "teks", "jam", "terkirim"),
     "pengaturan": ("kunci", "nilai"),
     "meta": ("kunci", "nilai"),
 }
@@ -93,6 +95,7 @@ PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "muhasabah": ("tanggal",),
     "catatan_harian": ("tanggal",),
     "memo_foto": ("id",),
+    "pengingat_harian": ("tanggal",),
     "pengaturan": ("kunci",),
     "meta": ("kunci",),
 }
@@ -105,6 +108,7 @@ INSERT_ORDER = (
     "muhasabah",
     "catatan_harian",
     "memo_foto",
+    "pengingat_harian",
     "pengaturan",
     "meta",
 )
@@ -356,6 +360,21 @@ def validate_payload(payload: Any) -> None:
         _check_text(row["keterangan"], "memo_foto.keterangan")
         _check_int(row["urutan"], "memo_foto.urutan")
         _check_text(row["dibuat_pada"], "memo_foto.dibuat_pada")
+
+    # Pengingat per tanggal baru ada di skema versi 4; ekspor lama tanpa
+    # tabel ini tetap diterima sebagai data kosong.
+    for row in data.get("pengingat_harian", []):
+        _check_date(row["tanggal"], "tanggal")
+        _check_text(row["teks"], "pengingat_harian.teks")
+        _check_text(row["jam"], "pengingat_harian.jam")
+        _check_int(row["terkirim"], "pengingat_harian.terkirim")
+        if row["jam"]:
+            try:
+                datetime.strptime(row["jam"], "%H:%M")
+            except ValueError as error:
+                raise TransferError(
+                    "pengingat_harian.jam harus berformat HH:MM"
+                ) from error
 
     photos = payload.get("photos", {})
     if not isinstance(photos, dict):

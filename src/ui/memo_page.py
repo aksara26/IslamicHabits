@@ -7,7 +7,8 @@ data pengguna, bukan di dalam basis data.
 
 Tombol **Memo sebelumnya** membuka daftar tanggal yang sudah punya memo,
 lengkap dengan cuplikan teks dan jumlah foto, sehingga pengguna tidak perlu
-menekan panah hari satu per satu.
+menekan panah hari satu per satu. Tombol **Kalender** membuka dialog yang
+menampilkan checklist, memo, dan pengingat satu tanggal sekaligus.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from ..logic.repository import MemoPhotoRecord, Repository
 from .a11y import set_accessible_label
 from .date_navigator import DateNavigator
 from .history_common import format_day
+from .memo_calendar import MemoCalendarDialog
 from .memo_history import MemoHistoryDialog
 
 __all__ = ["MemoPage"]
@@ -78,6 +80,17 @@ class MemoPage(Gtk.Box):
         actions.set_margin_start(18)
         actions.set_margin_end(18)
         actions.set_margin_top(6)
+
+        calendar = Gtk.Button()
+        calendar.add_css_class("ih-quick")
+        calendar.set_tooltip_text(
+            "Lihat kalender memo, checklist, dan pengingat per tanggal"
+        )
+        calendar.set_child(self._icon_label("x-office-calendar-symbolic", "Kalender"))
+        set_accessible_label(calendar, "Buka kalender memo dan pengingat")
+        calendar.connect("clicked", self._open_calendar)
+        actions.append(calendar)
+        self._calendar_button = calendar
 
         history = Gtk.Button()
         history.add_css_class("ih-quick")
@@ -330,6 +343,24 @@ class MemoPage(Gtk.Box):
 
     def _on_save_clicked(self, _button: Gtk.Button) -> None:
         self.save_now()
+
+    # -- kalender memo ---------------------------------------------------
+
+    def _open_calendar(self, _button: Gtk.Button) -> None:
+        self._flush_note()
+        dialog = MemoCalendarDialog(
+            self._repo,
+            current_day=self.day,
+            on_open=self._open_from_calendar,
+            on_changed=self._on_calendar_changed,
+        )
+        dialog.present(self.get_root() or self)
+
+    def _open_from_calendar(self, day: date) -> None:
+        self.set_day(day)
+
+    def _on_calendar_changed(self) -> None:
+        self._on_data_changed()
 
     # -- memo sebelumnya -------------------------------------------------
 

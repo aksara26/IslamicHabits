@@ -215,9 +215,15 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
    `memo/` di folder data. Tombol **Memo sebelumnya** membuka daftar memo lama
    dengan pencarian, cuplikan, dan jumlah foto. Kartu **Memo harian** di atas
    daftar **Hari Ini** menautkan ke halaman ini.
-8. `Ctrl+F` membuka **pencarian global** untuk memo, muhasabah, catatan ibadah,
-   dan nama ibadah; memilih hasil langsung membuka halaman dan tanggal yang
-   tepat.
+8. Tombol **Kalender** di halaman Memo membuka dialog **Kalender Memo**. Pilih
+   satu tanggal untuk melihat checklist kegiatan, pratinjau memo, dan pengingat
+   tanggal itu. Pengingat di sini **terpisah dari memo** dan punya jam sendiri;
+   isian ini bisa dibuat untuk tanggal lampau, hari ini, atau masa depan.
+   Pengingat hari ini akan muncul sebagai toast dan popup saat jamnya tiba bila
+   popup diizinkan.
+9. `Ctrl+F` membuka **pencarian global** untuk memo, pengingat, muhasabah,
+   catatan ibadah, dan nama ibadah; memilih hasil langsung membuka halaman dan
+   tanggal yang tepat.
 
 Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
 
@@ -232,6 +238,9 @@ Tombol **Uji notifikasi** mengirim satu popup contoh:
   pastikan `IslamicHabits` diizinkan.
 - Toast di dalam aplikasi tetap muncul walaupun izin popup ditolak.
 - Klik popup akan membuka halaman Memo pada hari ini.
+- Pengingat per tanggal dari dialog **Kalender Memo** memakai izin popup yang
+  sama; hanya pengingat hari ini yang memicu notifikasi, dan status terkirim
+  mencegah pesan yang sama muncul berulang.
 - Versi Flatpak memakai ID `io.github.kurakura.IslamicHabits` dalam pengaturan
   notifikasi sistem.
 

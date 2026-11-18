@@ -50,8 +50,27 @@ menyebutkan:
   **Urutkan**, Riwayat memadatkan kontrolnya, dan **Hapus semua data** meminta
   konfirmasi dengan mengetik `HAPUS` serta menawarkan ekspor lebih dulu.
 
+Rilis **v0.5.0** menaikkan skema dan format ekspor ke **v4**. Tabel baru
+`pengingat_harian` menyimpan teks, jam `HH:MM`, dan status terkirim untuk satu
+pengingat per tanggal. Migrasi v3 → v4 berjalan otomatis, dan impor tetap
+menerima berkas ekspor v1/v2/v3. Catatan rilis v0.5.0 harus menyebutkan:
+
+- tombol **Kalender** di halaman Memo membuka dialog **Kalender Memo** dengan
+  grid bulan, penanda `✎` memo dan `◷` pengingat, ringkasan checklist,
+  pratinjau memo, dan tombol **Buka memo tanggal ini**;
+- **pengingat per tanggal** terpisah dari memo, punya jam sendiri, dan boleh
+  dibuat untuk tanggal lampau, hari ini, atau masa depan;
+- pengingat hari ini memicu toast dan popup desktop saat jamnya tiba bila
+  popup diizinkan; status `terkirim` mencegah pengulangan, dan menyimpan ulang
+  teks/jam mengaktifkannya kembali;
+- teks pengingat ikut **pencarian global** dan hasilnya membuka halaman Memo
+  pada tanggal tersebut;
+- ekspor/impor mencakup `pengingat_harian`, sementara berkas lama tanpa tabel
+  itu tetap diterima.
+
 ### Riwayat rilis
 
+- **v0.5.0**: dialog Kalender Memo dan pengingat per tanggal berjam; skema serta ekspor v4.
 - **v0.4.0**: audit UX menyeluruh; navbar tujuh menu, pencarian global, dialog Memo sebelumnya, navigasi tanggal bersama, Kalender dua panel, menu aksi Kelola Ibadah, dan konfirmasi hapus dua langkah.
 - **v0.3.1**: perbaikan pemuatan tiga tema (Hijau, Putih, Hitam) pada instalasi `--user`, tata letak Memo yang lebih rapi dengan area tulisan berbeda, dan launcher desktop berjalur absolut.
 - **v0.2.0**: ibadah dan kebiasaan umum memakai satu tabel dan satu statistik; preset kebiasaan; tren garis harian, bulanan, dan tahunan; navbar tujuh menu.
@@ -91,7 +110,7 @@ lebih mandiri dan tetap disarankan untuk pengguna GNOME.
 
 ## 4. GitHub Releases
 
-1. Buat tag `v0.4.0` (sesuaikan nomor versi) dan push ke GitHub.
+1. Buat tag `v0.5.0` (sesuaikan nomor versi) dan push ke GitHub.
 2. Workflow `.github/workflows/build.yml` menjalankan tes (termasuk `bash -n
    packaging/install.sh`), membangun AppImage, lalu melampirkan AppImage,
    `install.sh`, `SHA256SUMS`, dan ikon SVG ke rilis tag.

@@ -28,6 +28,7 @@ if GTK_TERSEDIA:
     from src.ui.calendar_page import CalendarPage
     from src.ui.date_navigator import DateNavigator
     from src.ui.history_page import HistoryPage
+    from src.ui.memo_calendar import MemoCalendarDialog
     from src.ui.memo_history import MemoHistoryDialog
     from src.ui.memo_page import MemoPage
     from src.ui.muhasabah_page import MuhasabahPage
@@ -360,6 +361,68 @@ class UiSmokeTests(unittest.TestCase):
         dialog._search_entry.set_text("tidak ada")
         self.assertEqual(dialog._visible, ())
         self.assertIn("Tidak ada", dialog._count_label.get_label())
+
+    def test_kalender_memo_menampilkan_checklist_memo_dan_pengingat(self) -> None:
+        day = date.today() - timedelta(days=1)
+        worship = self.repo.add_worship(
+            name="Subuh kalender",
+            kind=EntryKind.CHECK,
+            active_from=day,
+        )
+        self.repo.set_entry(worship.id, day, value=True, note="Tepat waktu")
+        self.repo.save_daily_note(day, "Memo untuk kalender")
+        self.repo.save_reminder(day, "Minum air", "07:30")
+
+        opened: list[date] = []
+        changed: list[bool] = []
+        dialog = MemoCalendarDialog(
+            self.repo,
+            current_day=day,
+            on_open=opened.append,
+            on_changed=lambda: changed.append(True),
+        )
+        self.assertEqual(dialog._selected, day)
+        self.assertIn("Memo untuk kalender", dialog._memo_preview.get_label())
+        self.assertEqual(dialog._reminder_entry.get_text(), "Minum air")
+        self.assertEqual(dialog._reminder_time.get_text(), "07:30")
+        self.assertIn("07:30", dialog._reminder_status.get_label())
+
+        rows = []
+        child = dialog._checklist_list.get_first_child()
+        while child is not None:
+            rows.append(child)
+            child = child.get_next_sibling()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].get_title(), "Subuh kalender")
+        self.assertIn("Selesai", rows[0].get_subtitle())
+
+        # Simpan pengingat baru untuk tanggal lampau.
+        dialog._reminder_entry.set_text("Baca buku")
+        dialog._reminder_time.set_text("20:15")
+        dialog._save_reminder()
+        saved = self.repo.get_reminder(day)
+        self.assertEqual(saved.text, "Baca buku")
+        self.assertEqual(saved.time, "20:15")
+        self.assertTrue(changed)
+
+        # Jam tidak valid ditolak tanpa mengubah data.
+        dialog._reminder_time.set_text("25:00")
+        dialog._save_reminder()
+        self.assertIn("HH:MM", dialog._reminder_status.get_label())
+        self.assertEqual(self.repo.get_reminder(day).time, "20:15")
+
+        dialog.close = lambda: None  # type: ignore[method-assign]
+        dialog._open_selected_memo(None)
+        self.assertEqual(opened, [day])
+
+    def test_memo_punya_tombol_kalender(self) -> None:
+        memo = MemoPage(
+            self.repo,
+            on_data_changed=lambda: None,
+            on_toast=self._toast,
+        )
+        self.assertIsNotNone(memo._calendar_button)
+        self.assertIn("kalender", memo._calendar_button.get_tooltip_text())
 
     def test_pencarian_global_membuka_halaman_tujuan(self) -> None:
         day = date.today() - timedelta(days=3)

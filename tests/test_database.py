@@ -20,6 +20,7 @@ TABLES = (
     "muhasabah",
     "catatan_harian",
     "memo_foto",
+    "pengingat_harian",
     "pengaturan",
 )
 
@@ -205,6 +206,42 @@ class DatabaseTests(unittest.TestCase):
             )
         }
         self.assertIn("idx_memo_foto_tanggal", indexes)
+
+    def test_migration_from_schema_v3_creates_daily_reminders(self) -> None:
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        self.addCleanup(connection.close)
+        connection.execute(
+            "CREATE TABLE meta (kunci TEXT PRIMARY KEY, nilai TEXT NOT NULL)"
+        )
+        connection.execute(
+            "INSERT INTO meta (kunci, nilai) VALUES ('schema_version', '3')"
+        )
+        connection.execute(
+            "CREATE TABLE catatan_harian (tanggal TEXT PRIMARY KEY, teks TEXT NOT NULL DEFAULT '')"
+        )
+        connection.execute(
+            "CREATE TABLE memo_foto (id INTEGER PRIMARY KEY, tanggal TEXT NOT NULL, "
+            "berkas TEXT NOT NULL UNIQUE, keterangan TEXT NOT NULL DEFAULT '', "
+            "urutan INTEGER NOT NULL DEFAULT 0, dibuat_pada TEXT NOT NULL DEFAULT '')"
+        )
+        connection.commit()
+
+        initialize(connection, seed=False)
+
+        names = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        self.assertIn("pengingat_harian", names)
+        self.assertEqual(
+            connection.execute(
+                "SELECT nilai FROM meta WHERE kunci = 'schema_version'"
+            ).fetchone()["nilai"],
+            str(SCHEMA_VERSION),
+        )
 
     def test_database_file_is_created_in_requested_directory(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

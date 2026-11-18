@@ -2,7 +2,7 @@
 
 Aplikasi desktop Linux untuk mencatat ibadah **dan kebiasaan** harian secara pribadi. Dibuat untuk penggunaan sendiri, data tersimpan lokal, tanpa akun, tanpa server, dan didistribusikan lewat GitHub.
 
-> **Status:** versi 0.4.0 siap untuk uji pakai. Ibadah dan kebiasaan umum (belajar, baca buku, olahraga, dan lain-lain) memakai satu sistem pencatatan dan satu statistik. Tersedia tren garis **harian, bulanan per hari, dan tahunan per bulan**, Hari Ini sebagai ringkasan dengan tombol tambah cepat, **halaman Memo dengan lampiran foto dan penjelajah memo sebelumnya**, Kalender terpisah, Muhasabah, Pengaturan, **pencarian global**, pengingat dengan izin popup, aksesibilitas dasar, ekspor/impor/cadangan, serta installer satu perintah tanpa `sudo`. Navigasi dipadatkan menjadi tujuh menu dan tata letak seluruh halaman dirapikan. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
+> **Status:** versi 0.5.0 siap untuk uji pakai. Ibadah dan kebiasaan umum (belajar, baca buku, olahraga, dan lain-lain) memakai satu sistem pencatatan dan satu statistik. Tersedia tren garis **harian, bulanan per hari, dan tahunan per bulan**, Hari Ini sebagai ringkasan dengan tombol tambah cepat, **halaman Memo dengan lampiran foto, penjelajah memo sebelumnya, dan dialog Kalender Memo**, Kalender terpisah, Muhasabah, Pengaturan, **pencarian global**, pengingat harian dengan izin popup, **pengingat per tanggal dengan jam sendiri**, aksesibilitas dasar, ekspor/impor/cadangan, serta installer satu perintah tanpa `sudo`. Navigasi dipadatkan menjadi tujuh menu dan tata letak seluruh halaman dirapikan. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
 
 > **Panduan instalasi:** [`INSTALL.md`](INSTALL.md). Berkas ini fokus pada fitur, arsitektur, dan perilaku aplikasi.
 
@@ -55,16 +55,18 @@ Aplikasi ini membantu pengguna mencatat dan merefleksikan ibadah hariannya (shol
 - Tambah kebiasaan cepat lewat tombol **Tambah kebiasaan** dengan preset belajar, baca buku, olahraga, jalan kaki, dan tidur awal
 - Catatan bebas harian per tanggal, terpisah dari catatan kegiatan dan muhasabah
 - **Halaman Memo** dengan editor catatan harian, galeri foto (JPG, PNG, WEBP, GIF), dan dialog **Memo sebelumnya**; foto disalin ke folder data, bukan disimpan di basis data
+- **Dialog Kalender Memo** dari halaman Memo: grid bulan dengan penanda memo dan pengingat, ringkasan checklist, pratinjau memo, serta editor pengingat per tanggal
+- **Pengingat per tanggal** yang terpisah dari memo, punya jam sendiri, dan boleh dibuat untuk tanggal lampau, hari ini, atau masa depan
 - **Kartu Memo harian** ringkas di atas daftar Hari Ini yang menautkan ke halaman Memo
 - Kategori dan pengelolaan kegiatan (tambah, ubah, urutkan, arsipkan), termasuk kategori **Kebiasaan**
 - Riwayat dengan tiga tren: harian 30 hari, bulanan per hari, dan tahunan per bulan
 - Kalender bulanan dua panel dengan penanda status, penanda catatan, dan penanda pengingat hari ini
-- **Pencarian global** lintas memo, muhasabah, catatan ibadah, dan nama ibadah dari bilah judul
+- **Pencarian global** lintas memo, pengingat, muhasabah, catatan ibadah, dan nama ibadah dari bilah judul
 - Statistik yang sama untuk ibadah dan kebiasaan, dihitung sejak tanggal mulai aktif
 - Catatan muhasabah harian
 - Ekspor, impor, dan cadangan data (kompatibel dengan berkas lama; foto ikut diekspor sebagai base64)
 - Tiga tema dengan aksen sage: **Hijau** (default), **Putih**, dan **Hitam**
-- Pengingat berdasarkan jam yang dipilih pengguna, dengan toast dan popup desktop setelah izin diberikan di dalam aplikasi
+- Pengingat harian berdasarkan jam yang dipilih pengguna, dengan toast dan popup desktop setelah izin diberikan di dalam aplikasi
 
 ### Sengaja tidak termasuk
 
@@ -184,6 +186,7 @@ IslamicHabits/
 │       ├── note_history_page.py  # daftar memo lama (dipakai dialog Memo sebelumnya)
 │       ├── memo_page.py    # Memo harian: editor, galeri foto, dialog izin/file
 │       ├── memo_history.py # dialog "Memo sebelumnya" + pencarian
+│       ├── memo_calendar.py # dialog Kalender Memo + pengingat per tanggal
 │       ├── muhasabah_page.py
 │       ├── settings_page.py
 │       ├── manage_page.py  # Kelola Ibadah + menu aksi per baris
@@ -235,18 +238,20 @@ Tetapkan di awal karena mengubahnya belakangan memengaruhi desktop entry, identi
 | **muhasabah** | tanggal, teks, jawaban pertanyaan pemantik |
 | **catatan_harian** | tanggal, catatan bebas untuk hari itu (skema v2) |
 | **memo_foto** | id, tanggal, nama berkas di folder `memo/`, keterangan, urutan (skema v3) |
-| **pengaturan** | tema, jam pengingat, popup pengingat, izin popup, preferensi tampilan |
+| **pengingat_harian** | tanggal, teks pengingat, jam `HH:MM`, status terkirim (skema v4) |
+| **pengaturan** | tema, jam pengingat harian, popup pengingat, izin popup, preferensi tampilan |
 | **meta** | nomor versi skema |
 
 **Aturan data:**
 
 - **Satu catatan per kegiatan (ibadah atau kebiasaan) per tanggal.** Kebiasaan tidak memakai tabel terpisah dan tidak tampil sebagai memo harian.
 - **Satu catatan harian bebas per tanggal**, berbeda dari catatan per kegiatan dan dari muhasabah.
+- **Satu pengingat per tanggal**, terpisah dari memo. Pengingat menyimpan teks dan jam sendiri sehingga tanggal yang sama bisa punya memo dan pengingat sekaligus.
 - **Foto memo disimpan sebagai berkas** di `memo/` dalam folder data, bukan sebagai BLOB, supaya basis data tetap ringan dan berkas bisa dicadangkan terpisah. Tabel `memo_foto` hanya menyimpan nama berkas, keterangan, dan urutan.
 - Statistik **dihitung dari catatan**, tidak disimpan sebagai angka mati. Dengan begitu koreksi data masa lalu tidak merusak hitungan.
 - Kegiatan yang diarsipkan menjadi **arsip**, bukan dihapus fisik, agar riwayat utuh.
 - Tanggal disimpan sebagai tanggal lokal murni (tahun-bulan-hari), tanpa jam.
-- Nomor versi skema kini **v3**; basis data lama otomatis dimigrasikan tanpa kehilangan data (v1 → v2 menambah `catatan_harian`, v2 → v3 menambah `memo_foto`).
+- Nomor versi skema kini **v4**; basis data lama otomatis dimigrasikan tanpa kehilangan data (v1 → v2 menambah `catatan_harian`, v2 → v3 menambah `memo_foto`, v3 → v4 menambah `pengingat_harian`).
 - `aktif_mulai` dipakai sebagai denominator statistik. Kegiatan baru tidak dihitung pada tanggal sebelum ia ditambahkan, agar riwayat lama tidak terasa menghukum.
 - Kegiatan arsip tetap disimpan dan boleh ikut statistik lewat toggle "Tampilkan arsip".
 
@@ -400,17 +405,29 @@ Menu navbar tersendiri (`Ctrl+2`), hasil pemindahan dari mode bulanan Riwayat �
 
 Sebelumnya catatan harian punya halaman navbar sendiri. Karena isinya sama dengan Memo, daftar itu dipindahkan ke dialog **Memo sebelumnya** yang dibuka dari halaman Memo (`Ctrl+5`), sehingga navbar cukup tujuh menu.
 
-- Tombol berikon `document-open-recent-symbolic` dan label **Memo sebelumnya** berada di atas editor, di samping tombol **Simpan**.
+- Tombol berikon `document-open-recent-symbolic` dan label **Memo sebelumnya** berada di atas editor, di samping tombol **Kalender** dan **Simpan**.
 - Dialog menampilkan semua tanggal yang punya teks memo atau foto, diurutkan dari yang terbaru, lengkap dengan cuplikan teks dan jumlah foto.
 - Pencarian menyaring isi memo maupun tanggal; keadaan kosong membedakan "belum ada memo" dan "tidak ada hasil pencarian".
 - Memilih satu baris menutup dialog dan membuka tanggal itu langsung di editor Memo, tanpa perlu menekan panah hari satu per satu.
 - Kelas `NoteHistoryPage` dipertahankan agar kompatibel dengan kode dan pengujian lama, tetapi tidak lagi dipasang di navbar.
 
-### 8.6 Memo
+### 8.6 Kalender Memo (dialog)
+
+Tombol **Kalender** di halaman Memo membuka dialog dua panel tanpa mengubah editor. Dialog ini menjawab satu kebutuhan: melihat catatan lengkap satu tanggal — checklist, memo, dan pengingat — lalu mengatur pengingat untuk tanggal itu.
+
+- Grid bulan di kiri dengan navigasi bulan sebelumnya/berikutnya dan tombol **Bulan ini**. Hari yang punya memo ditandai `✎`, hari yang punya pengingat ditandai `◷`, dan hari terpilih memakai latar sage.
+- Panel kanan menampilkan tanggal terpilih secara lengkap: ringkasan **checklist** kegiatan aktif beserta status dan catatan singkatnya, pratinjau **memo** beserta jumlah karakter/foto, dan editor **pengingat**.
+- Pengingat di dialog ini **berbeda dari memo** dan **berbeda dari pengingat harian di Pengaturan**. Isinya teks bebas plus jam `HH:MM`, disimpan di tabel `pengingat_harian`.
+- Pengingat boleh dibuat untuk **tanggal lampau, hari ini, atau masa depan**. Tanggal lampau berguna sebagai catatan yang sengaja diingat kembali; tanggal mendatang disiapkan sebelum harinya tiba.
+- Tombol **Buka memo tanggal ini** menutup dialog dan membuka editor Memo pada tanggal tersebut. Perubahan pengingat langsung menyegarkan halaman lain lewat callback data berubah.
+- Pengingat hari ini diperiksa oleh jendela utama tiap menit. Saat jamnya tiba, toast dan popup desktop dikirim bila popup diizinkan, lalu status `terkirim` disimpan agar tidak berulang. Mengubah teks atau jam mengembalikan status itu supaya pengingat baru tetap berbunyi.
+
+### 8.7 Memo
 
 Menu navbar tersendiri (`Ctrl+5`) untuk menulis memo harian dan melampirkan foto.
 
 - Navigasi tanggal bersama (sebelumnya, kalender popover, hari ini, berikutnya) yang juga dipakai Hari Ini dan Muhasabah; label tanggal bisa diklik untuk melompat ke tanggal jauh
+- Tombol **Kalender** membuka dialog Kalender Memo untuk melihat checklist, memo, dan pengingat satu tanggal, serta membuat pengingat dengan jam tertentu
 - Tombol **Simpan** dan pintasan `Ctrl+S` menyimpan segera; editor tetap menyimpan otomatis setelah jeda singkat dan saat pindah tanggal atau menutup jendela
 - Tata letak dipusatkan dengan lebar maksimum 820 px: kartu editor dan kartu foto tidak melebar di layar besar, dengan jarak dan margin yang konsisten
 - Kepala editor menampilkan jumlah karakter dan status simpan; area tulisan memakai permukaan `ih-editor-bg` yang berbeda dari latar aplikasi maupun kartu di sekelilingnya, dengan placeholder yang tidak menghalangi klik
@@ -420,7 +437,7 @@ Menu navbar tersendiri (`Ctrl+5`) untuk menulis memo harian dan melampirkan foto
 - Hari lampau dan hari depan boleh diisi; label halus mengingatkan konteks tanggalnya
 - Kartu **Memo harian** di Hari Ini dan Kalender menautkan ke halaman ini pada tanggal yang sesuai
 
-### 8.7 Muhasabah
+### 8.8 Muhasabah
 
 Halaman ini berisi refleksi terpandu dengan pertanyaan pemantik, berbeda dari **catatan harian** bebas di halaman Memo dan Hari Ini.
 
@@ -429,7 +446,7 @@ Halaman ini berisi refleksi terpandu dengan pertanyaan pemantik, berbeda dari **
 - Pencarian teks di seluruh catatan muhasabah
 - Simpan otomatis agar tulisan tidak hilang
 
-### 8.8 Kelola Ibadah
+### 8.9 Kelola Ibadah
 
 Label navbar tetap **Kelola Ibadah**, tetapi halaman ini mengelola ibadah **dan kebiasaan** dalam satu daftar.
 
@@ -440,7 +457,7 @@ Label navbar tetap **Kelola Ibadah**, tetapi halaman ini mengelola ibadah **dan 
 - Arsipkan (bukan hapus), lalu lihat dan pulihkan lewat toggle "Tampilkan arsip"
 - Hapus permanen hanya lewat konfirmasi tegas karena riwayatnya ikut hilang
 
-### 8.9 Pengaturan
+### 8.10 Pengaturan
 
 - **Tampilan**: tema **Hijau** (default), **Putih**, atau **Hitam**; area tulisan selalu memakai permukaan tersendiri yang berbeda dari latar aplikasi
 - **Pengingat**: hidup atau mati, jam (HH:MM), sakelar **Popup pemberitahuan** (default aktif), baris **Izin popup**, dan tombol **Uji notifikasi**; tetap hanya berjalan saat aplikasi terbuka
@@ -465,17 +482,18 @@ Daftar untuk memperkirakan besar pekerjaan:
 8. Panel detail hari terpilih di Kalender
 9. Navigasi tanggal bersama dengan kalender popover
 10. Dialog **Memo sebelumnya** dengan pencarian, cuplikan, dan jumlah foto
-11. Pencarian global lintas memo, muhasabah, catatan ibadah, dan nama ibadah
-12. Halaman Memo dengan editor autosave, tombol Simpan, dan galeri foto bermenu
-13. Editor muhasabah
-14. Formulir ibadah/kebiasaan dengan preset kebiasaan dan pemilih tanggal
-15. Dialog konfirmasi (hapus, hapus foto, hapus semua data, impor yang menimpa data)
-16. Dialog izin popup dan dialog pilih berkas foto
-15. Toast singkat berisi tombol "Urungkan"
-16. Popup notifikasi desktop lewat `Gio.Notification`
-17. Halaman kosong dengan pesan ramah
-18. Halaman pengenalan
-19. `TrendLine` — garis tren harian, bulanan, dan tahunan (`src/ui/trend_line.py`), dengan alternatif teks dan navigasi keyboard
+11. Dialog **Kalender Memo** dengan grid bulan, checklist, pratinjau memo, dan editor pengingat berjam
+12. Pencarian global lintas memo, pengingat, muhasabah, catatan ibadah, dan nama ibadah
+13. Halaman Memo dengan editor autosave, tombol Simpan, dan galeri foto bermenu
+14. Editor muhasabah
+15. Formulir ibadah/kebiasaan dengan preset kebiasaan dan pemilih tanggal
+16. Dialog konfirmasi (hapus, hapus foto, hapus semua data, impor yang menimpa data)
+17. Dialog izin popup dan dialog pilih berkas foto
+18. Toast singkat berisi tombol "Urungkan"
+19. Popup notifikasi desktop lewat `Gio.Notification`
+20. Halaman kosong dengan pesan ramah
+21. Halaman pengenalan
+22. `TrendLine` — garis tren harian, bulanan, dan tahunan (`src/ui/trend_line.py`), dengan alternatif teks dan navigasi keyboard
 
 > **Catatan versi pustaka:** target pengembangan adalah libadwaita 1.10 (Fedora 45). Cek dokumentasi versi tersebut sebelum memakai suatu komponen, dan hindari komponen yang sudah ditandai usang.
 
@@ -569,6 +587,21 @@ Izin popup diminta lewat dialog `Adw.AlertDialog` di dalam aplikasi, bukan langs
 
 Tombol **Uji notifikasi** di Pengaturan mengirim satu popup contoh sekaligus toast, supaya izin notifikasi bisa diperiksa tanpa menunggu jam pengingat. Kegagalan mengirim notifikasi dibungkus `try/except` dan tidak pernah menghalangi pencatatan.
 
+### Pengingat per tanggal (dialog Kalender Memo)
+
+Selain pengingat harian di Pengaturan, setiap tanggal bisa punya **pengingat sendiri** yang terpisah dari memo. Fitur ini dibuka lewat tombol **Kalender** di halaman Memo.
+
+| Aspek | Perilaku |
+|---|---|
+| Penyimpanan | Tabel `pengingat_harian`: satu baris per tanggal, berisi teks, jam `HH:MM`, dan status `terkirim` |
+| Tanggal | Boleh tanggal lampau, hari ini, atau masa depan |
+| Notifikasi | Hanya pengingat **hari ini** yang diperiksa; saat jamnya tiba, toast muncul dan popup desktop dikirim bila `pengingat_popup = 1` serta izin sudah diberikan |
+| Pencegahan ulang | Setelah dikirim, `terkirim` diisi `1`. Menyimpan ulang teks atau jam mengembalikan `terkirim` ke `0` agar pengingat baru tetap berbunyi |
+| Hubungan dengan memo | Terpisah sepenuhnya: menghapus memo tidak menghapus pengingat, dan sebaliknya |
+| Pencarian | Teks pengingat ikut dicari oleh pencarian global dan membuka halaman Memo pada tanggalnya |
+
+Pengingat tanggal lampau dan mendatang tetap tersimpan sebagai catatan, tetapi tidak memicu notifikasi susulan. Ini mencegah toast lama muncul beruntun saat aplikasi dibuka.
+
 Opsi lengkap masih ditunda karena menambah kerumitan (apakah aplikasi tetap hidup setelah jendela ditutup?) dan pada Flatpak ada aturan izin tersendiri. Popup v1 **tidak** berjalan saat aplikasi tertutup.
 
 ---
@@ -577,12 +610,13 @@ Opsi lengkap masih ditunda karena menambah kerumitan (apakah aplikasi tetap hidu
 
 Fitur inti, bukan pelengkap, karena tidak ada server dan data hanya ada di satu komputer.
 
-**Keputusan v1:** format ekspor = **JSON berversi** (`islamichabits-export`, `schema_version`, metadata, array per tabel, dan bagian `photos`). Versi ekspor dan skema saat ini adalah **3**. Cadangan otomatis **mingguan** ke folder pilihan pengguna, memakai format yang sama.
+**Keputusan v1:** format ekspor = **JSON berversi** (`islamichabits-export`, `schema_version`, metadata, array per tabel, dan bagian `photos`). Versi ekspor dan skema saat ini adalah **4**. Cadangan otomatis **mingguan** ke folder pilihan pengguna, memakai format yang sama.
 
-- **Ekspor** semua data ke satu berkas JSON dengan penanda `islamichabits-export`, `schema_version`, metadata, dan array per tabel, termasuk `catatan_harian` dan `memo_foto`
+- **Ekspor** semua data ke satu berkas JSON dengan penanda `islamichabits-export`, `schema_version`, metadata, dan array per tabel, termasuk `catatan_harian`, `memo_foto`, dan `pengingat_harian`
 - **Foto memo** diekspor sebagai teks base64 di kunci `photos` dengan nama berkas sebagai kuncinya, sehingga satu berkas JSON cukup untuk memindahkan memo beserta gambarnya
-- **Impor** dengan pilihan gabungkan atau timpa, disertai pratinjau jumlah kegiatan, catatan kegiatan, catatan harian, foto, muhasabah, baris baru, dan kunci yang sudah ada. Impor menulis ulang berkas foto ke folder `memo/`; mode timpa menghapus berkas foto lama yang tidak ada di berkas impor
-- Ekspor lama (v1 tanpa `catatan_harian`, v2 tanpa `memo_foto`) tetap diterima; tabel yang hilang dibaca sebagai array kosong sehingga catatan lokal tidak ikut terhapus
+- **Impor** dengan pilihan gabungkan atau timpa, disertai pratinjau jumlah kegiatan, catatan kegiatan, catatan harian, pengingat, foto, muhasabah, baris baru, dan kunci yang sudah ada. Impor menulis ulang berkas foto ke folder `memo/`; mode timpa menghapus berkas foto lama yang tidak ada di berkas impor
+- Ekspor lama (v1 tanpa `catatan_harian`, v2 tanpa `memo_foto`, v3 tanpa `pengingat_harian`) tetap diterima; tabel yang hilang dibaca sebagai array kosong sehingga catatan lokal tidak ikut terhapus
+- Jam pengingat divalidasi sebagai `HH:MM` saat impor, dan status `terkirim` divalidasi sebagai bilangan bulat
 - Nama berkas foto divalidasi (harus nama polos dengan ekstensi gambar yang didukung) dan isi base64 diperiksa sebelum data ditulis, agar berkas impor tidak bisa menulis ke luar folder data
 - **Cadangan otomatis** mingguan ke folder pilihan pengguna; dijalankan sekali saat aplikasi dibuka, dengan tombol "Cadangkan sekarang" sebagai pelengkap
 - **Validasi** berkas impor agar berkas rusak atau versi tidak dikenal tidak merusak data yang ada
@@ -602,6 +636,7 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 - Ukuran huruf mengikuti pengaturan sistem
 - Area klik cukup besar dan tidak terlalu rapat; rasio kontras sage sudah dihitung (bagian 10), tetapi tetap diverifikasi secara visual pada sesi nyata
 - Hari dengan memo ditandai `✎` di Kalender dan disertai teks "ada catatan harian" pada label pembaca layar, bukan sekadar ikon; hari ini dengan pengingat aktif ditandai `◷`
+- Dialog Kalender Memo memberi label pembaca layar pada setiap tanggal, termasuk penanda memo/pengingat, dan editor pengingat punya label teks serta jam
 - Setiap ubin foto punya label pembaca layar untuk membuka dan menghapus foto; gambar yang hilang menampilkan ikon pengganti, bukan area kosong
 - Dialog **Memo sebelumnya** bisa dijelajahi dengan panah dan dibuka dengan Enter; pencariannya menyaring teks memo maupun tanggal
 - Pencarian global bisa dibuka dengan `Ctrl+F`, dijelajahi dengan panah, dan setiap hasil membuka halaman yang tepat
@@ -610,12 +645,12 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 ## 15. Pengujian
 
-- **Logika** (statistik, hari aktif, kebiasaan, memo harian, foto, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: **89 pengujian lolos** dengan `python3 -m unittest discover -s tests -q`
-- **Versi skema** divalidasi, termasuk migrasi v1 → v2 → v3 (tabel `catatan_harian` dan `memo_foto`) serta seed kebiasaan bawaan pada basis data lama tanpa menghapus data
+- **Logika** (statistik, hari aktif, kebiasaan, memo harian, pengingat per tanggal, foto, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: **97 pengujian lolos** dengan `python3 -m unittest discover -s tests -q`
+- **Versi skema** divalidasi, termasuk migrasi v1 → v2 → v3 → v4 (tabel `catatan_harian`, `memo_foto`, dan `pengingat_harian`) serta seed kebiasaan bawaan pada basis data lama tanpa menghapus data
 - **Deret tren** diuji untuk 30 hari, per hari dalam bulan, dan per bulan dalam tahun, memakai `aktif_mulai` sebagai denominator
-- **Ekspor/impor** diuji untuk tabel baru, foto base64, penolakan nama berkas tidak aman, pratinjau, serta kompatibilitas berkas v1 yang tidak memiliki `catatan_harian` dan v2 yang tidak memiliki `memo_foto`
+- **Ekspor/impor** diuji untuk tabel baru, pengingat per tanggal, foto base64, penolakan nama berkas tidak aman, pratinjau, serta kompatibilitas berkas v1 yang tidak memiliki `catatan_harian`, v2 yang tidak memiliki `memo_foto`, dan v3 yang tidak memiliki `pengingat_harian`
 - **Kontras palet** diuji dari berkas CSS dengan rumus WCAG; status kosong tidak memakai transparansi yang menurunkan kontras
-- **Smoke test UI** mencakup penyimpanan memo, kartu Memo harian yang menautkan ke halaman Memo, galeri foto, dialog Memo sebelumnya, navigasi tanggal, pencarian global, konfirmasi hapus semua data, Kalender dengan banner pengingat, kelima kebiasaan bawaan di Hari Ini, tiga mode Riwayat, dan klik tren tahunan yang membuka Kalender
+- **Smoke test UI** mencakup penyimpanan memo, kartu Memo harian yang menautkan ke halaman Memo, galeri foto, dialog Memo sebelumnya, dialog Kalender Memo beserta penyimpanan pengingat, tombol Kalender di Memo, navigasi tanggal, pencarian global, konfirmasi hapus semua data, Kalender dengan banner pengingat, kelima kebiasaan bawaan di Hari Ini, tiga mode Riwayat, dan klik tren tahunan yang membuka Kalender
 - **Kasus tepi:**
   - Pergantian tengah malam saat aplikasi terbuka
   - Mengisi hari lampau dan hari depan
@@ -664,8 +699,9 @@ Cara memasang, menjalankan, memperbarui, dan mencopot aplikasi, serta lokasi dat
 - [x] 17. Rilis `v0.3.0` dengan Memo, foto, izin popup, dan format ekspor v3
 - [x] 18. Rilis patch `v0.3.1`: pemulihan tiga tema, pencarian stylesheet instalasi `--user`, tata letak Memo, dan launcher absolut
 - [x] 19. Audit UX menyeluruh: navbar tujuh menu, pencarian global, dialog **Memo sebelumnya**, navigasi tanggal bersama, Kalender dua panel, menu aksi Kelola Ibadah, konfirmasi hapus dua langkah, dan penyederhanaan Riwayat
+- [x] 20. Rilis `v0.5.0`: dialog **Kalender Memo** dengan checklist, memo, dan pengingat per tanggal berjam (skema dan ekspor v4)
 
-**Status akhir:** seluruh langkah 1–19 selesai. 89 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar tujuh menu, Kalender dua panel, Memo dengan foto dan dialog **Memo sebelumnya**, pencarian global, tiga tema, serta ikon kubah masjid sudah terpasang. Rilis `v0.1.0`, `v0.2.0`, `v0.3.0`, dan `v0.3.1` sudah hidup; `v0.4.0` merapikan navigasi dan seluruh tata letak halaman. Uji visual tiga tema, halaman Memo, serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
+**Status akhir:** seluruh langkah 1–20 selesai. 97 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar tujuh menu, Kalender dua panel, Memo dengan foto, dialog **Memo sebelumnya**, dialog **Kalender Memo** dengan pengingat per tanggal, pencarian global, tiga tema, serta ikon kubah masjid sudah terpasang. Rilis `v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, dan `v0.4.0` sudah hidup; `v0.5.0` menambahkan kalender Memo dan pengingat per tanggal. Uji visual tiga tema, halaman Memo, serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
 
 ---
 

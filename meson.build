@@ -1,7 +1,7 @@
 project(
   'IslamicHabits',
   'c',
-  version: '0.4.0',
+  version: '0.5.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 0.63.0',
 )
@@ -48,6 +48,7 @@ python3.install_sources(
   'src/ui/note_history_page.py',
   'src/ui/memo_page.py',
   'src/ui/memo_history.py',
+  'src/ui/memo_calendar.py',
   'src/ui/search_popover.py',
   'src/ui/muhasabah_page.py',
   'src/ui/settings_page.py',

@@ -19,6 +19,19 @@
   </developer>
   <url type="homepage">https://github.com/aksara26/IslamicHabits</url>
   <releases>
+    <release version="0.5.0" date="2026-11-18">
+      <description>
+        <p>
+          Halaman Memo mendapat dialog Kalender Memo untuk melihat catatan
+          lengkap satu tanggal: checklist kegiatan, pratinjau memo, dan
+          pengingat. Pengingat per tanggal kini terpisah dari memo, punya jam
+          sendiri, dan boleh dibuat untuk tanggal lampau, hari ini, atau masa
+          depan. Pengingat hari ini memicu toast dan popup saat jamnya tiba,
+          dengan status terkirim agar tidak berulang. Skema basis data dan
+          format ekspor naik ke versi 4; berkas lama tetap bisa diimpor.
+        </p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-18">
       <description>
         <p>

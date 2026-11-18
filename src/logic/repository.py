@@ -26,6 +26,7 @@ __all__ = [
     "EntryRecord",
     "MuhasabahRecord",
     "DailyNoteRecord",
+    "ReminderRecord",
     "MemoPhotoRecord",
     "SearchHit",
     "Repository",
@@ -135,6 +136,20 @@ class DailyNoteRecord:
     day: date
     text: str
     photo_count: int = 0
+
+
+@dataclass(frozen=True)
+class ReminderRecord:
+    """Pengingat satu tanggal dengan jam, terpisah dari memo harian.
+
+    ``sent`` menandai bahwa notifikasi untuk tanggal itu sudah ditampilkan
+    supaya pemeriksaan berkala tidak mengirim pesan yang sama berulang kali.
+    """
+
+    day: date
+    text: str
+    time: str = ""
+    sent: bool = False
 
 
 @dataclass(frozen=True)
@@ -663,6 +678,105 @@ class Repository:
         )
         self._db.commit()
 
+    # -- pengingat per tanggal -------------------------------------------
+
+    def get_reminder(self, day: date | str) -> ReminderRecord:
+        """Ambil pengingat satu tanggal; baris kosong bila belum ada."""
+
+        iso = _to_iso(day)
+        assert iso is not None
+        row = self._db.execute(
+            "SELECT tanggal, teks, jam, terkirim FROM pengingat_harian "
+            "WHERE tanggal = ?",
+            (iso,),
+        ).fetchone()
+        if row is None:
+            return ReminderRecord(day=date.fromisoformat(iso), text="", time="")
+        return ReminderRecord(
+            day=date.fromisoformat(row["tanggal"]),
+            text=row["teks"],
+            time=row["jam"],
+            sent=bool(row["terkirim"]),
+        )
+
+    def list_reminders(
+        self,
+        *,
+        start: date | str | None = None,
+        end: date | str | None = None,
+    ) -> tuple[ReminderRecord, ...]:
+        conditions: list[str] = []
+        params: list[Any] = []
+        if start is not None:
+            conditions.append("tanggal >= ?")
+            params.append(_to_iso(start))
+        if end is not None:
+            conditions.append("tanggal <= ?")
+            params.append(_to_iso(end))
+        where = " WHERE " + " AND ".join(conditions) if conditions else ""
+        rows = self._db.execute(
+            "SELECT tanggal, teks, jam, terkirim FROM pengingat_harian"
+            + where
+            + " ORDER BY tanggal DESC",
+            params,
+        ).fetchall()
+        return tuple(
+            ReminderRecord(
+                day=date.fromisoformat(row["tanggal"]),
+                text=row["teks"],
+                time=row["jam"],
+                sent=bool(row["terkirim"]),
+            )
+            for row in rows
+        )
+
+    def save_reminder(
+        self,
+        day: date | str,
+        text: str,
+        time: str = "08:00",
+    ) -> None:
+        """Simpan pengingat satu tanggal; teks kosong menghapus barisnya.
+
+        Menyimpan ulang pengingat mengembalikan status ``terkirim`` ke nol
+        supaya jam yang baru diubah tetap memicu notifikasi pada waktunya.
+        """
+
+        clean = text.strip()
+        if not clean:
+            self.delete_reminder(day)
+            return
+        clean_time = _normalize_time(time)
+        if clean_time is None:
+            raise ValueError("Jam pengingat harus berformat HH:MM")
+        self._db.execute(
+            """
+            INSERT INTO pengingat_harian (tanggal, teks, jam, terkirim)
+            VALUES (?, ?, ?, 0)
+            ON CONFLICT(tanggal) DO UPDATE SET
+                teks = excluded.teks,
+                jam = excluded.jam,
+                terkirim = 0
+            """,
+            (_to_iso(day), clean, clean_time),
+        )
+        self._db.commit()
+
+    def mark_reminder_sent(self, day: date | str) -> None:
+        """Tandai pengingat tanggal itu sudah dinotifikasikan."""
+
+        self._db.execute(
+            "UPDATE pengingat_harian SET terkirim = 1 WHERE tanggal = ?",
+            (_to_iso(day),),
+        )
+        self._db.commit()
+
+    def delete_reminder(self, day: date | str) -> None:
+        self._db.execute(
+            "DELETE FROM pengingat_harian WHERE tanggal = ?", (_to_iso(day),)
+        )
+        self._db.commit()
+
     # -- foto memo --------------------------------------------------------
 
     def list_memo_photos(self, day: date | str | None = None) -> tuple[MemoPhotoRecord, ...]:
@@ -815,6 +929,21 @@ class Repository:
             )
 
         for row in self._db.execute(
+            "SELECT tanggal, teks, jam FROM pengingat_harian WHERE teks LIKE ? "
+            "ORDER BY tanggal DESC LIMIT ?",
+            (pattern, limit),
+        ).fetchall():
+            jam = f" pukul {row['jam']}" if row["jam"] else ""
+            hits.append(
+                SearchHit(
+                    kind="reminder",
+                    title=f"Pengingat{jam}",
+                    snippet=self._search_snippet(row["teks"], text),
+                    day=date.fromisoformat(row["tanggal"]),
+                )
+            )
+
+        for row in self._db.execute(
             "SELECT tanggal, teks, jawaban FROM muhasabah "
             "WHERE teks LIKE ? OR jawaban LIKE ? "
             "ORDER BY tanggal DESC LIMIT ?",
@@ -882,6 +1011,7 @@ class Repository:
             "catatan",
             "muhasabah",
             "catatan_harian",
+            "pengingat_harian",
             "ibadah",
             "kategori",
             "pengaturan",

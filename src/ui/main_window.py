@@ -464,6 +464,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._repo.set_meta(META_ONBOARDING_DONE, "1")
 
     def _check_reminder(self) -> bool:
+        self._check_daily_reminder()
         if self._repo.get_setting(SETTING_REMINDER_ENABLED, "0") != "1":
             return True
         target = self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
@@ -495,6 +496,36 @@ class MainWindow(Adw.ApplicationWindow):
                 "Buka Memo",
                 lambda: self._open_memo(now.date()),
             )
+        return True
+
+    def _check_daily_reminder(self, now: datetime | None = None) -> bool:
+        """Kirim pengingat tanggal hari ini sekali saat jamnya tiba.
+
+        Pengingat per tanggal berbeda dari pengingat harian di Pengaturan.
+        Yang diperiksa hanya pengingat hari ini; tanggal lampau dan mendatang
+        tetap tersimpan sebagai catatan tanpa memicu notifikasi susulan.
+        """
+
+        moment = now or datetime.now()
+        reminder = self._repo.get_reminder(moment.date())
+        if reminder.sent or not reminder.text.strip() or not reminder.time:
+            return True
+        try:
+            target = datetime.strptime(reminder.time, "%H:%M").strftime("%H:%M")
+        except ValueError:
+            return True
+        if moment.strftime("%H:%M") < target:
+            return True
+
+        self._repo.mark_reminder_sent(moment.date())
+        body = reminder.text.strip()
+        if self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1":
+            self._send_notification(f"Pengingat {target}", body)
+        self._toast(
+            f"Pengingat {target}: {body}",
+            "Buka Memo",
+            lambda: self._open_memo(moment.date()),
+        )
         return True
 
     def _send_notification(self, title: str, body: str) -> bool:

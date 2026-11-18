@@ -85,6 +85,14 @@ class TransferTests(unittest.TestCase):
                 "catatan_harian": [
                     {"tanggal": "2026-11-18", "teks": "Catatan dari impor"}
                 ],
+                "pengingat_harian": [
+                    {
+                        "tanggal": "2026-11-18",
+                        "teks": "Minum air",
+                        "jam": "07:30",
+                        "terkirim": 0,
+                    }
+                ],
                 "pengaturan": [{"kunci": "tema", "nilai": "gelap"}],
                 "meta": [{"kunci": "cadangan_terakhir", "nilai": "2026-11-18"}],
             },
@@ -105,6 +113,7 @@ class TransferTests(unittest.TestCase):
             "muhasabah",
             "catatan_harian",
             "memo_foto",
+            "pengingat_harian",
             "pengaturan",
             "meta",
         ):
@@ -166,6 +175,53 @@ class TransferTests(unittest.TestCase):
             self.repo.get_daily_note(date(2026, 11, 18)).text,
             "Catatan lokal tetap ada",
         )
+
+    def test_reminders_are_exported_and_imported(self) -> None:
+        self.repo.save_reminder(date(2026, 11, 18), "Minum air", "07:30")
+        payload = create_export(self.repo)
+        self.assertEqual(
+            payload["data"]["pengingat_harian"],
+            [
+                {
+                    "tanggal": "2026-11-18",
+                    "teks": "Minum air",
+                    "jam": "07:30",
+                    "terkirim": 0,
+                }
+            ],
+        )
+
+        other = Repository(connect(":memory:"))
+        self.addCleanup(other.close)
+        summary = import_payload(other, payload, mode="merge")
+        self.assertEqual(summary.inserted["pengingat_harian"], 1)
+        reminder = other.get_reminder(date(2026, 11, 18))
+        self.assertEqual(reminder.text, "Minum air")
+        self.assertEqual(reminder.time, "07:30")
+
+    def test_old_export_without_reminders_is_accepted(self) -> None:
+        payload = self._sample_payload()
+        payload["schema_version"] = 3
+        payload["export_version"] = 3
+        payload["data"].pop("pengingat_harian")
+
+        validate_payload(payload)
+        self.assertEqual(
+            describe_import(self.repo, payload).counts["pengingat_harian"], 0
+        )
+        import_payload(self.repo, payload, mode="merge")
+        self.assertEqual(self.repo.list_reminders(), ())
+
+    def test_invalid_reminder_time_is_rejected(self) -> None:
+        payload = self._sample_payload()
+        payload["data"]["pengingat_harian"][0]["jam"] = "25:99"
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+        payload = self._sample_payload()
+        payload["data"]["pengingat_harian"][0]["terkirim"] = "0"
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
 
     def test_photo_files_are_exported_and_imported(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
