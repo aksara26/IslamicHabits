@@ -104,12 +104,14 @@ class TransferTests(unittest.TestCase):
             "catatan",
             "muhasabah",
             "catatan_harian",
+            "memo_foto",
             "pengaturan",
             "meta",
         ):
             self.assertIn(table, payload["data"])
         self.assertGreater(len(payload["data"]["ibadah"]), 0)
         self.assertIn("exported_at", payload)
+        self.assertIn("photos", payload)
 
     def test_write_export_and_parse_roundtrip(self) -> None:
         self.repo.set_entry(
@@ -164,6 +166,89 @@ class TransferTests(unittest.TestCase):
             self.repo.get_daily_note(date(2026, 11, 18)).text,
             "Catatan lokal tetap ada",
         )
+
+    def test_photo_files_are_exported_and_imported(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            source_dir = Path(folder) / "asal"
+            source_dir.mkdir()
+            repo = Repository(self.connection, photos_dir=source_dir)
+            image = Path(folder) / "pagi.png"
+            image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 32)
+            photo = repo.add_memo_photo(date(2026, 11, 18), image)
+
+            payload = create_export(repo)
+            self.assertEqual(len(payload["data"]["memo_foto"]), 1)
+            self.assertEqual(
+                payload["data"]["memo_foto"][0]["berkas"], photo.file_name
+            )
+            self.assertIn(photo.file_name, payload["photos"])
+
+            target_dir = Path(folder) / "tujuan"
+            other = Repository(connect(":memory:"), photos_dir=target_dir)
+            self.addCleanup(other.close)
+            import_payload(other, payload, mode="replace")
+
+            copied = other.list_memo_photos(date(2026, 11, 18))
+            self.assertEqual(len(copied), 1)
+            self.assertEqual(copied[0].file_name, photo.file_name)
+            self.assertTrue((target_dir / photo.file_name).is_file())
+            self.assertEqual(
+                (target_dir / photo.file_name).read_bytes(),
+                image.read_bytes(),
+            )
+            self.assertEqual(
+                other.get_daily_note(date(2026, 11, 18)).photo_count, 1
+            )
+
+    def test_replace_import_removes_old_photo_files(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            photos = Path(folder) / "memo"
+            repo = Repository(self.connection, photos_dir=photos)
+            image = Path(folder) / "lama.png"
+            image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 32)
+            old = repo.add_memo_photo(date(2026, 11, 17), image)
+            old_path = repo.photo_path(old)
+
+            payload = self._sample_payload()
+            import_payload(repo, payload, mode="replace")
+
+            self.assertFalse(old_path.exists())
+            self.assertEqual(repo.list_memo_photos(), ())
+
+    def test_invalid_photo_name_is_rejected(self) -> None:
+        payload = self._sample_payload()
+        payload["data"]["memo_foto"] = [
+            {
+                "id": 1,
+                "tanggal": "2026-11-18",
+                "berkas": "../keluar.png",
+                "keterangan": "",
+                "urutan": 0,
+                "dibuat_pada": "",
+            }
+        ]
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+        payload = self._sample_payload()
+        payload["data"]["memo_foto"] = [
+            {
+                "id": 1,
+                "tanggal": "2026-11-18",
+                "berkas": "foto.txt",
+                "keterangan": "",
+                "urutan": 0,
+                "dibuat_pada": "",
+            }
+        ]
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+    def test_invalid_photo_base64_is_rejected(self) -> None:
+        payload = self._sample_payload()
+        payload["photos"] = {"foto.png": "bukan base64!"}
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
 
     # -- validasi --------------------------------------------------------
 

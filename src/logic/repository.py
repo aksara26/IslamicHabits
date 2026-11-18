@@ -7,12 +7,15 @@ diberikan ke modul ``statistics`` lewat metode ``to_statistics()``.
 from __future__ import annotations
 
 import math
+import shutil
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
-from .database import get_meta, initialize, set_meta
+from .database import default_photos_dir, get_meta, initialize, set_meta
 from .statistics import Entry as StatisticsEntry
 from .statistics import EntryKind, StatusValue
 from .statistics import Worship as StatisticsWorship
@@ -23,13 +26,18 @@ __all__ = [
     "EntryRecord",
     "MuhasabahRecord",
     "DailyNoteRecord",
+    "MemoPhotoRecord",
     "Repository",
     "EntryValue",
     "neutral_value",
+    "PHOTO_SUFFIXES",
 ]
 
 EntryValue = bool | float | str | StatusValue | None
 _UNSET = object()
+
+PHOTO_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp", ".gif"})
+MAX_PHOTO_BYTES = 25 * 1024 * 1024
 
 
 def _to_iso(value: date | str | None) -> str | None:
@@ -125,6 +133,18 @@ class DailyNoteRecord:
 
     day: date
     text: str
+    photo_count: int = 0
+
+
+@dataclass(frozen=True)
+class MemoPhotoRecord:
+    """Satu berkas foto yang dilampirkan pada memo tanggal tertentu."""
+
+    id: int
+    day: date
+    file_name: str
+    caption: str
+    order: int
 
 
 class Repository:
@@ -145,12 +165,24 @@ class Repository:
         JOIN ibadah i ON i.id = e.ibadah_id
     """
 
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        photos_dir: str | Path | None = None,
+    ) -> None:
         self._db = connection
+        self._photos_dir = (
+            Path(photos_dir) if photos_dir is not None else default_photos_dir()
+        )
 
     @property
     def connection(self) -> sqlite3.Connection:
         return self._db
+
+    @property
+    def photos_dir(self) -> Path:
+        return self._photos_dir
 
     def close(self) -> None:
         self._db.close()
@@ -535,17 +567,18 @@ class Repository:
     # -- catatan harian ---------------------------------------------------
 
     def get_daily_note(self, day: date | str) -> DailyNoteRecord:
+        iso = _to_iso(day)
+        assert iso is not None
         row = self._db.execute(
-            "SELECT tanggal, teks FROM catatan_harian WHERE tanggal = ?",
-            (_to_iso(day),),
+            "SELECT teks FROM catatan_harian WHERE tanggal = ?", (iso,)
         ).fetchone()
-        if row is None:
-            return DailyNoteRecord(
-                day=date.fromisoformat(_to_iso(day)),  # type: ignore[arg-type]
-                text="",
-            )
+        count = self._db.execute(
+            "SELECT COUNT(*) AS n FROM memo_foto WHERE tanggal = ?", (iso,)
+        ).fetchone()
         return DailyNoteRecord(
-            day=date.fromisoformat(row["tanggal"]), text=row["teks"]
+            day=date.fromisoformat(iso),
+            text="" if row is None else row["teks"],
+            photo_count=int(count["n"]),
         )
 
     def list_daily_notes(
@@ -557,27 +590,42 @@ class Repository:
         conditions: list[str] = []
         params: list[Any] = []
         if start is not None:
-            conditions.append("tanggal >= ?")
+            conditions.append("d.tanggal >= ?")
             params.append(_to_iso(start))
         if end is not None:
-            conditions.append("tanggal <= ?")
+            conditions.append("d.tanggal <= ?")
             params.append(_to_iso(end))
         where = " WHERE " + " AND ".join(conditions) if conditions else ""
         rows = self._db.execute(
-            "SELECT tanggal, teks FROM catatan_harian"
+            """
+            SELECT d.tanggal AS tanggal, COALESCE(h.teks, '') AS teks,
+                   (SELECT COUNT(*) FROM memo_foto f
+                    WHERE f.tanggal = d.tanggal) AS foto
+            FROM (
+                SELECT tanggal FROM catatan_harian
+                UNION
+                SELECT tanggal FROM memo_foto
+            ) AS d
+            LEFT JOIN catatan_harian h ON h.tanggal = d.tanggal
+            """
             + where
-            + " ORDER BY tanggal DESC",
+            + " ORDER BY d.tanggal DESC",
             params,
         ).fetchall()
         return tuple(
             DailyNoteRecord(
-                day=date.fromisoformat(row["tanggal"]), text=row["teks"]
+                day=date.fromisoformat(row["tanggal"]),
+                text=row["teks"],
+                photo_count=int(row["foto"]),
             )
             for row in rows
         )
 
     def save_daily_note(self, day: date | str, text: str) -> None:
-        """Simpan catatan bebas satu tanggal; baris kosong dihapus."""
+        """Simpan catatan bebas satu tanggal; baris kosong dihapus.
+
+        Foto memo tidak ikut terhapus karena disimpan di tabel terpisah.
+        """
 
         clean = text.strip()
         if not clean:
@@ -598,14 +646,107 @@ class Repository:
         )
         self._db.commit()
 
+    # -- foto memo --------------------------------------------------------
+
+    def list_memo_photos(self, day: date | str | None = None) -> tuple[MemoPhotoRecord, ...]:
+        if day is None:
+            rows = self._db.execute(
+                "SELECT id, tanggal, berkas, keterangan, urutan FROM memo_foto "
+                "ORDER BY tanggal DESC, urutan, id"
+            ).fetchall()
+        else:
+            rows = self._db.execute(
+                "SELECT id, tanggal, berkas, keterangan, urutan FROM memo_foto "
+                "WHERE tanggal = ? ORDER BY urutan, id",
+                (_to_iso(day),),
+            ).fetchall()
+        return tuple(self._memo_photo_from_row(row) for row in rows)
+
+    def count_memo_photos(self, day: date | str) -> int:
+        row = self._db.execute(
+            "SELECT COUNT(*) AS n FROM memo_foto WHERE tanggal = ?", (_to_iso(day),)
+        ).fetchone()
+        return int(row["n"])
+
+    def add_memo_photo(
+        self,
+        day: date | str,
+        source: str | Path,
+        *,
+        caption: str = "",
+    ) -> MemoPhotoRecord:
+        """Salin satu berkas gambar ke folder data dan catat di basis data."""
+
+        source_path = Path(source)
+        if not source_path.is_file():
+            raise ValueError("Berkas foto tidak ditemukan")
+        suffix = source_path.suffix.lower()
+        if suffix not in PHOTO_SUFFIXES:
+            raise ValueError("Format foto harus JPG, PNG, WEBP, atau GIF")
+        size = source_path.stat().st_size
+        if size <= 0:
+            raise ValueError("Berkas foto kosong")
+        if size > MAX_PHOTO_BYTES:
+            raise ValueError("Ukuran foto maksimal 25 MB")
+
+        iso = _to_iso(day)
+        assert iso is not None
+        self._photos_dir.mkdir(parents=True, exist_ok=True)
+        file_name = f"{iso.replace('-', '')}-{uuid4().hex}{suffix}"
+        target = self._photos_dir / file_name
+        shutil.copyfile(source_path, target)
+
+        order_row = self._db.execute(
+            "SELECT COALESCE(MAX(urutan), -1) + 1 AS next FROM memo_foto "
+            "WHERE tanggal = ?",
+            (iso,),
+        ).fetchone()
+        try:
+            cursor = self._db.execute(
+                """
+                INSERT INTO memo_foto
+                    (tanggal, berkas, keterangan, urutan, dibuat_pada)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    iso,
+                    file_name,
+                    caption.strip(),
+                    int(order_row["next"]),
+                    datetime.now().isoformat(timespec="seconds"),
+                ),
+            )
+            self._db.commit()
+        except sqlite3.Error:
+            target.unlink(missing_ok=True)
+            raise
+        return self._get_memo_photo(int(cursor.lastrowid))
+
+    def delete_memo_photo(self, photo_id: int) -> None:
+        row = self._db.execute(
+            "SELECT berkas FROM memo_foto WHERE id = ?", (photo_id,)
+        ).fetchone()
+        if row is None:
+            return
+        self._db.execute("DELETE FROM memo_foto WHERE id = ?", (photo_id,))
+        self._db.commit()
+        (self._photos_dir / row["berkas"]).unlink(missing_ok=True)
+
+    def photo_path(self, photo: MemoPhotoRecord | str) -> Path:
+        name = photo.file_name if isinstance(photo, MemoPhotoRecord) else photo
+        return self._photos_dir / name
+
     def clear_all_data(self) -> None:
         """Hapus semua data pengguna, lalu kembalikan ibadah bawaan.
 
         Dipakai setelah konfirmasi tegas dari halaman Pengaturan. Skema dan
-        data awal dibuat ulang supaya aplikasi tetap bisa dipakai.
+        data awal dibuat ulang supaya aplikasi tetap bisa dipakai. Berkas foto
+        memo ikut dihapus agar tidak tertinggal sebagai sampah.
         """
 
+        photo_rows = self._db.execute("SELECT berkas FROM memo_foto").fetchall()
         for table in (
+            "memo_foto",
             "catatan",
             "muhasabah",
             "catatan_harian",
@@ -616,6 +757,8 @@ class Repository:
         ):
             self._db.execute(f"DELETE FROM {table}")
         self._db.commit()
+        for row in photo_rows:
+            (self._photos_dir / row["berkas"]).unlink(missing_ok=True)
         initialize(self._db, seed=True)
 
     # -- pembantu --------------------------------------------------------
@@ -674,6 +817,26 @@ class Repository:
             value=value,
             time=row["jam"],
             note=row["catatan"],
+        )
+
+    def _get_memo_photo(self, photo_id: int) -> MemoPhotoRecord:
+        row = self._db.execute(
+            "SELECT id, tanggal, berkas, keterangan, urutan FROM memo_foto "
+            "WHERE id = ?",
+            (photo_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Foto memo {photo_id} tidak ditemukan")
+        return self._memo_photo_from_row(row)
+
+    @staticmethod
+    def _memo_photo_from_row(row: sqlite3.Row) -> MemoPhotoRecord:
+        return MemoPhotoRecord(
+            id=row["id"],
+            day=date.fromisoformat(row["tanggal"]),
+            file_name=row["berkas"],
+            caption=row["keterangan"],
+            order=row["urutan"],
         )
 
 

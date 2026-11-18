@@ -229,6 +229,48 @@ scrollbar slider:hover {
   box-shadow: 0 1px 2px alpha(@ih-night, 0.05);
 }
 
+/* Baris ibadah dipadatkan supaya lebih banyak kegiatan terlihat tanpa
+ * menggulir. Subtitle kosong tidak ditampilkan oleh Adw, jadi baris centang
+ * dan status bisa lebih pendek daripada baris angka yang punya target. */
+row.ih-row {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+row.ih-row > box {
+  min-height: 0;
+}
+
+/* Foto memo tampil sebagai ubin persegi dengan tombol hapus di sudut. */
+.ih-photo-tile {
+  background-color: @ih-surface-card;
+  border: 1px solid @ih-line;
+  border-radius: 10px;
+  padding: 6px;
+}
+
+button.ih-photo-open {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 8px;
+}
+
+button.ih-photo-remove {
+  min-width: 28px;
+  min-height: 28px;
+  margin-top: 4px;
+  margin-right: 4px;
+  padding: 0;
+  border-radius: 14px;
+  background-color: alpha(@ih-surface-card, 0.92);
+  color: @ih-sage;
+}
+
+button.ih-photo-remove:hover {
+  background-color: @ih-selected;
+}
+
 .ih-section-title {
   color: @ih-sage;
   font-weight: 700;

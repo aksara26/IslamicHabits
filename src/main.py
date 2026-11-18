@@ -58,6 +58,10 @@ class IslamicHabitsApplication(Adw.Application):
         open_muhasabah.connect("activate", self._on_open_muhasabah)
         self.add_action(open_muhasabah)
 
+        open_memo = Gio.SimpleAction.new("open-memo", None)
+        open_memo.connect("activate", self._on_open_memo)
+        self.add_action(open_memo)
+
         self.set_accels_for_action("win.prev-day", ["<Ctrl>Left"])
         self.set_accels_for_action("win.next-day", ["<Ctrl>Right"])
         self.set_accels_for_action("win.today", ["<Ctrl>T"])
@@ -65,6 +69,7 @@ class IslamicHabitsApplication(Adw.Application):
         self.set_accels_for_action("win.go-calendar", ["<Ctrl>2"])
         self.set_accels_for_action("win.history-year", ["<Ctrl>3"])
         self.set_accels_for_action("win.go-note-history", ["<Ctrl>4"])
+        self.set_accels_for_action("win.go-memo", ["<Ctrl>5"])
         self.set_accels_for_action("win.go-settings", ["<Ctrl>comma"])
         self.set_accels_for_action("win.new-worship", ["<Ctrl>N"])
         self.set_accels_for_action("win.new-habit", ["<Ctrl><Shift>N"])
@@ -78,6 +83,13 @@ class IslamicHabitsApplication(Adw.Application):
             window = MainWindow(application=self, repository=self.repository)
         window.present()
         window.open_muhasabah_today()
+
+    def _on_open_memo(self, *_args: object) -> None:
+        window = self.props.active_window
+        if window is None:
+            window = MainWindow(application=self, repository=self.repository)
+        window.present()
+        window.open_memo_today()
 
     def do_activate(self) -> None:
         window = self.props.active_window

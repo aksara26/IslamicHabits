@@ -201,16 +201,18 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
    kebiasaan dengan kategori **Kebiasaan**; pintasannya `Ctrl+Shift+N`.
 4. Isi **Pengaturan** bila ingin tema tertentu (palet sage terang/gelap),
    pengingat harian, popup pemberitahuan, atau folder cadangan.
-5. Sidebar memiliki tujuh menu terpisah: **Hari Ini**, **Riwayat**, **Kalender**,
-   **Histori Catatan**, **Muhasabah**, **Kelola Ibadah**, dan **Pengaturan**.
-   Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender, `Ctrl+3` Riwayat
-   tahunan, `Ctrl+4` Histori Catatan, dan `Ctrl+Shift+N` kebiasaan baru.
+5. Sidebar memiliki delapan menu terpisah: **Hari Ini**, **Riwayat**,
+   **Kalender**, **Histori Catatan**, **Memo**, **Muhasabah**, **Kelola Ibadah**,
+   dan **Pengaturan**. Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender,
+   `Ctrl+3` Riwayat tahunan, `Ctrl+4` Histori Catatan, `Ctrl+5` Memo, dan
+   `Ctrl+Shift+N` kebiasaan baru.
 6. Halaman **Riwayat** memuat tiga tren garis: 30 hari terakhir, per hari dalam
    satu bulan, dan per bulan dalam satu tahun. Klik titik tren harian untuk
    membuka tanggal itu; klik titik tren tahunan untuk membuka Kalender.
-7. Di bawah daftar **Hari Ini** tersedia kartu **Catatan harian** yang tersimpan
-   otomatis. Catatan yang sama tampil pada detail hari di Riwayat dan Kalender,
-   serta sebagai daftar di **Histori Catatan** (catatan harian saja).
+7. Halaman **Memo** (`Ctrl+5`) menyimpan teks memo harian dan lampiran foto
+   (JPG, PNG, WEBP, GIF; maksimal 25 MB per berkas). Teks tersimpan otomatis,
+   foto disalin ke folder `memo/` di folder data. Kartu **Memo harian** di bawah
+   daftar **Hari Ini** menautkan ke halaman ini.
 8. `Ctrl+F` memfokuskan pencarian catatan harian bila **Histori Catatan** sedang
    aktif; di halaman lain pintasan ini membuka pencarian muhasabah.
 
@@ -218,31 +220,35 @@ Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
 
 ### Izin notifikasi
 
-Pengingat hanya berjalan saat aplikasi terbuka. Bila **Pengaturan → Pengingat →
-Popup pemberitahuan** aktif (default), aplikasi mengirim notifikasi desktop
-lewat GNOME. Tombol **Uji notifikasi** mengirim satu popup contoh:
+Pengingat hanya berjalan saat aplikasi terbuka. Saat Anda menyalakan **Popup
+pemberitahuan** atau pengingat, aplikasi meminta izin lewat dialog di dalam
+aplikasi. Setelah diizinkan, aplikasi mengirim notifikasi desktop lewat GNOME.
+Tombol **Uji notifikasi** mengirim satu popup contoh:
 
 - Jika popup tidak muncul, periksa **Pengaturan Sistem → Notifikasi** dan
   pastikan `IslamicHabits` diizinkan.
 - Toast di dalam aplikasi tetap muncul walaupun izin popup ditolak.
-- Klik popup akan membuka halaman Muhasabah pada hari ini.
+- Klik popup akan membuka halaman Memo pada hari ini.
 - Versi Flatpak memakai ID `io.github.kurakura.IslamicHabits` dalam pengaturan
   notifikasi sistem.
 
 ## 7. Lokasi data dan pencopotan
 
-| Instalasi | Basis data | Cadangan bawaan |
-|---|---|---|
-| Sumber / AppImage | `$XDG_DATA_HOME/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` atau `~/.local/share/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../io.github.kurakura.IslamicHabits/backups/` |
-| Flatpak | `~/.var/app/io.github.kurakura.IslamicHabits/data/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../data/io.github.kurakura.IslamicHabits/backups/` |
+| Instalasi | Basis data | Foto memo | Cadangan bawaan |
+|---|---|---|---|
+| Sumber / AppImage | `$XDG_DATA_HOME/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` atau `~/.local/share/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../io.github.kurakura.IslamicHabits/memo/` | `.../io.github.kurakura.IslamicHabits/backups/` |
+| Flatpak | `~/.var/app/io.github.kurakura.IslamicHabits/data/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../data/io.github.kurakura.IslamicHabits/memo/` | `.../data/io.github.kurakura.IslamicHabits/backups/` |
 
 Halaman **Pengaturan → Data → Lokasi data** menampilkan jalur ini dan tombol
-**Buka folder**. Folder cadangan bisa diubah ke lokasi lain.
+**Buka folder**. Folder cadangan bisa diubah ke lokasi lain. Foto memo adalah
+berkas biasa di folder `memo/`; ekspor JSON menyertakannya sebagai base64,
+sedangkan cadangan mingguan memakai format yang sama.
 
 Mencopot aplikasi tidak otomatis menghapus data. Ini disengaja agar data tetap
 aman saat aplikasi diperbarui atau dipasang ulang. Untuk menghapus semua data
-dari dalam aplikasi, gunakan **Pengaturan → Data → Hapus semua data**; ibadah dan
-kebiasaan bawaan akan dikembalikan. Untuk menghapus folder data sepenuhnya, hapus manual
+dari dalam aplikasi, gunakan **Pengaturan → Data → Hapus semua data**; ibadah,
+kebiasaan bawaan, dan berkas foto memo akan dibersihkan, lalu ibadah dan
+kebiasaan bawaan dikembalikan. Untuk menghapus folder data sepenuhnya, hapus manual
 jalur pada tabel di atas setelah membuat cadangan.
 
 ## 8. Mendapatkan paket dari GitHub Releases

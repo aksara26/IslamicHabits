@@ -27,6 +27,7 @@ if GTK_TERSEDIA:
     from src.logic.statistics import EntryKind
     from src.ui.calendar_page import CalendarPage
     from src.ui.history_page import HistoryPage
+    from src.ui.memo_page import MemoPage
     from src.ui.muhasabah_page import MuhasabahPage
     from src.ui.note_history_page import NoteHistoryPage
     from src.ui.settings_page import SettingsPage
@@ -57,6 +58,7 @@ class UiSmokeTests(unittest.TestCase):
             self.repo,
             on_add_worship=lambda: None,
             on_data_changed=lambda: None,
+            on_open_memo=lambda _day: None,
         )
         history = HistoryPage(
             self.repo,
@@ -74,6 +76,11 @@ class UiSmokeTests(unittest.TestCase):
             on_open_day=lambda _day: None,
             on_toast=self._toast,
         )
+        memo = MemoPage(
+            self.repo,
+            on_data_changed=lambda: None,
+            on_toast=self._toast,
+        )
         muhasabah = MuhasabahPage(self.repo, on_toast=self._toast)
         settings = SettingsPage(
             self.repo,
@@ -83,22 +90,52 @@ class UiSmokeTests(unittest.TestCase):
             on_test_notification=lambda: None,
         )
 
-        for page in (today, history, calendar, notes, muhasabah, settings):
+        for page in (today, history, calendar, notes, memo, muhasabah, settings):
             self.assertIsNotNone(page.get_first_child())
 
-    def test_kartu_catatan_harian_tersimpan(self) -> None:
+    def test_memo_tersimpan_dan_kartu_hari_ini_menautkan(self) -> None:
+        memo = MemoPage(
+            self.repo,
+            on_data_changed=lambda: None,
+            on_toast=self._toast,
+        )
+        memo._note_view.get_buffer().set_text("Memo dari halaman Memo")
+        memo._save_note_now()
+        self.assertEqual(
+            self.repo.get_daily_note(date.today()).text,
+            "Memo dari halaman Memo",
+        )
+
+        opened: list[date] = []
         today = TodayPage(
             self.repo,
             on_add_worship=lambda: None,
             on_data_changed=lambda: None,
+            on_open_memo=opened.append,
         )
-        buffer = today._note_view.get_buffer()
-        buffer.set_text("Catatan dari halaman Hari Ini")
-        today._save_note_now()
-        self.assertEqual(
-            self.repo.get_daily_note(date.today()).text,
-            "Catatan dari halaman Hari Ini",
-        )
+        self.assertIn("Memo dari halaman Memo", today._note_preview.get_label())
+        today._on_open_memo(today.day)
+        self.assertEqual(opened, [date.today()])
+
+    def test_halaman_memo_menampilkan_foto(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            repo = Repository(self.connection, photos_dir=folder_path / "memo")
+            source = folder_path / "contoh.png"
+            source.write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 32)
+            repo.add_memo_photo(date.today(), source)
+
+            memo = MemoPage(
+                repo,
+                on_data_changed=lambda: None,
+                on_toast=self._toast,
+            )
+            self.assertEqual(memo._photo_count.get_label(), "1 foto")
+            self.assertEqual(memo._photo_stack.get_visible_child_name(), "photos")
+            self.assertEqual(len(repo.list_memo_photos(date.today())), 1)
 
     def test_kalender_menampilkan_capaian_dan_catatan_hari_lalu(self) -> None:
         day = date.today() - timedelta(days=1)
@@ -196,8 +233,31 @@ class UiSmokeTests(unittest.TestCase):
             on_add_worship=lambda: None,
             on_add_habit=lambda: None,
             on_data_changed=lambda: None,
+            on_open_memo=lambda _day: None,
         )
         self.assertIn("Belajar", [row.worship.name for row in today._rows.values()])
+
+    def test_kalender_menampilkan_status_pengingat(self) -> None:
+        from src.logic.constants import (
+            SETTING_REMINDER_ENABLED,
+            SETTING_REMINDER_PERMISSION,
+            SETTING_REMINDER_TIME,
+        )
+
+        self.repo.set_setting(SETTING_REMINDER_ENABLED, "1")
+        self.repo.set_setting(SETTING_REMINDER_TIME, "20:30")
+        self.repo.set_setting(SETTING_REMINDER_PERMISSION, "0")
+        calendar = CalendarPage(
+            self.repo,
+            on_open_day=lambda _day: None,
+            on_toast=self._toast,
+        )
+        self.assertIn("20:30", calendar._reminder_label.get_label())
+        self.assertIn("belum diizinkan", calendar._reminder_label.get_label())
+
+        self.repo.set_setting(SETTING_REMINDER_PERMISSION, "1")
+        calendar.refresh()
+        self.assertIn("diizinkan", calendar._reminder_label.get_label())
 
     def test_garis_tren_bisa_difokus(self) -> None:
         self.assertTrue(TrendLine().get_focusable())

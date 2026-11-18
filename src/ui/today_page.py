@@ -10,7 +10,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, GLib, Gtk, Pango
 
 from ..logic.repository import (
     EntryRecord,
@@ -44,6 +44,7 @@ BULAN = (
 )
 AddWorshipCallback = Callable[[], None]
 DataChangedCallback = Callable[[], None]
+OpenMemoCallback = Callable[[date], None]
 
 
 def _format_day(day: date) -> str:
@@ -148,6 +149,7 @@ class TodayPage(Gtk.Box):
         *,
         on_add_worship: AddWorshipCallback,
         on_data_changed: DataChangedCallback,
+        on_open_memo: OpenMemoCallback,
         on_add_habit: AddWorshipCallback | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
@@ -155,11 +157,10 @@ class TodayPage(Gtk.Box):
         self._on_add_worship = on_add_worship
         self._on_add_habit = on_add_habit or on_add_worship
         self._on_data_changed = on_data_changed
+        self._on_open_memo = on_open_memo
         self.day = date.today()
         self._known_today = date.today()
         self._rows: dict[int, "WorshipRow"] = {}
-        self._note_source: int | None = None
-        self._note_loading = False
 
         self._build_navigation()
         self._build_day_change_notice()
@@ -283,86 +284,58 @@ class TodayPage(Gtk.Box):
         card.set_margin_top(12)
         card.set_margin_bottom(18)
 
-        title = Gtk.Label(label="Catatan harian")
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        title = Gtk.Label(label="Memo harian")
         title.set_xalign(0)
+        title.set_hexpand(True)
         title.add_css_class("ih-section-title")
-        hint = Gtk.Label(label="Tulis hal singkat tentang hari ini; tersimpan otomatis.")
-        hint.set_xalign(0)
-        hint.add_css_class("ih-hint")
-        hint.set_wrap(True)
+        open_button = Gtk.Button(label="Buka Memo")
+        open_button.add_css_class("ih-quick")
+        open_button.set_tooltip_text("Tulis memo dan lampirkan foto")
+        open_button.connect("clicked", lambda *_: self._on_open_memo(self.day))
+        header.append(title)
+        header.append(open_button)
 
-        self._note_view = Gtk.TextView()
-        self._note_view.set_wrap_mode(Gtk.WrapMode.WORD)
-        self._note_view.set_accepts_tab(False)
-        self._note_view.get_buffer().connect("changed", self._on_note_changed)
-        set_accessible_label(self._note_view, "Catatan harian")
-        note_scroll = Gtk.ScrolledWindow()
-        note_scroll.set_min_content_height(90)
-        note_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        note_scroll.set_child(self._note_view)
+        self._note_preview = Gtk.Label(label="")
+        self._note_preview.set_xalign(0)
+        self._note_preview.set_wrap(True)
+        self._note_preview.set_lines(2)
+        self._note_preview.set_ellipsize(Pango.EllipsizeMode.END)
 
-        self._note_status = Gtk.Label(label="Tersimpan otomatis")
-        self._note_status.set_xalign(0)
-        self._note_status.add_css_class("ih-hint")
+        self._note_meta = Gtk.Label(label="")
+        self._note_meta.set_xalign(0)
+        self._note_meta.add_css_class("ih-hint")
 
-        card.append(title)
-        card.append(hint)
-        card.append(note_scroll)
-        card.append(self._note_status)
+        card.append(header)
+        card.append(self._note_preview)
+        card.append(self._note_meta)
         return card
 
     # -- catatan harian ---------------------------------------------------
 
-    def _note_text(self) -> str:
-        buffer = self._note_view.get_buffer()
-        return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
-
     def _load_note(self) -> None:
-        self._note_loading = True
-        try:
-            record = self._repo.get_daily_note(self.day)
-            self._note_view.get_buffer().set_text(record.text)
-            self._note_status.set_label("Tersimpan otomatis")
-        finally:
-            self._note_loading = False
-
-    def _on_note_changed(self, *_args: object) -> None:
-        if self._note_loading:
-            return
-        self._note_status.set_label("Menunggu penyimpanan…")
-        if self._note_source is not None:
-            GLib.source_remove(self._note_source)
-        self._note_source = GLib.timeout_add_seconds(1, self._autosave_note)
-
-    def _autosave_note(self) -> bool:
-        self._note_source = None
-        self._save_note_now()
-        return False
-
-    def _save_note_now(self, *, notify: bool = True) -> None:
-        self._repo.save_daily_note(self.day, self._note_text())
-        self._note_status.set_label("Tersimpan otomatis")
-        if notify:
-            self._on_data_changed()
-
-    def _flush_note(self, *, notify: bool = True) -> None:
-        if self._note_source is not None:
-            GLib.source_remove(self._note_source)
-            self._note_source = None
-            self._save_note_now(notify=notify)
+        record = self._repo.get_daily_note(self.day)
+        text = record.text.strip()
+        if text:
+            first = next(
+                (line.strip() for line in text.splitlines() if line.strip()), text
+            )
+            preview = first if len(first) <= 160 else first[:157] + "…"
+        else:
+            preview = "Belum ada memo untuk tanggal ini."
+        self._note_preview.set_label(preview)
+        parts = [f"{record.photo_count} foto"] if record.photo_count else []
+        parts.append("Tersimpan" if text else "Kosong")
+        self._note_meta.set_label(" · ".join(parts))
 
     # -- navigasi tanggal ------------------------------------------------
 
     def go_previous_day(self) -> None:
-        self._flush_note()
         self.day -= timedelta(days=1)
-        self._load_note()
         self.refresh()
 
     def go_next_day(self) -> None:
-        self._flush_note()
         self.day += timedelta(days=1)
-        self._load_note()
         self.refresh()
 
     def go_today(self) -> None:
@@ -371,10 +344,8 @@ class TodayPage(Gtk.Box):
     def set_day(self, day: date) -> None:
         """Tampilkan tanggal tertentu, misalnya dari Kalender atau Histori Catatan."""
 
-        self._flush_note()
         self.day = day
         self._day_change_revealer.set_reveal_child(False)
-        self._load_note()
         self.refresh()
 
     def _check_day_change(self) -> bool:
@@ -403,6 +374,7 @@ class TodayPage(Gtk.Box):
 
     def refresh(self) -> None:
         focused_id = self._focused_worship_id()
+        self._load_note()
         self._date_label.set_label(_format_day(self.day))
         if self.day > date.today():
             self._context_label.set_label("Hari depan — pencatatan dibatasi")
@@ -532,9 +504,3 @@ class TodayPage(Gtk.Box):
     def _on_entry_details_changed(self) -> None:
         self.refresh()
         self._on_data_changed()
-
-    def do_dispose(self) -> None:
-        # Saat jendela ditutup, simpan tulisan yang belum sempat masuk timer.
-        # Jangan memicu penyegaran UI dari widget yang sedang dibongkar.
-        self._flush_note(notify=False)
-        Gtk.Box.do_dispose(self)

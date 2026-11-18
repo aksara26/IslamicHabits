@@ -20,6 +20,7 @@ from ..logic.constants import (
     REPOSITORY_URL,
     SETTING_BACKUP_FOLDER,
     SETTING_REMINDER_ENABLED,
+    SETTING_REMINDER_PERMISSION,
     SETTING_REMINDER_POPUP,
     SETTING_REMINDER_TIME,
     SETTING_THEME,
@@ -30,7 +31,6 @@ from ..logic.transfer import (
     TransferError,
     backup_folder,
     create_backup,
-    create_export,
     describe_import,
     import_payload,
     parse_export,
@@ -103,6 +103,7 @@ class SettingsPage(Gtk.Box):
             self._time_row.set_text(
                 self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
             )
+            self._update_permission_row()
             self._backup_row.set_subtitle(str(backup_folder(self._repo)))
         finally:
             self._refreshing = False
@@ -124,7 +125,10 @@ class SettingsPage(Gtk.Box):
     def _build_reminder_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(
             title="Pengingat",
-            description="Hanya muncul saat aplikasi terbuka.",
+            description=(
+                "Pengingat berjalan selama aplikasi terbuka. Popup desktop "
+                "memerlukan izin dan dapat diblokir oleh pengaturan sistem."
+            ),
         )
 
         self._reminder_switch = Adw.SwitchRow(
@@ -146,6 +150,17 @@ class SettingsPage(Gtk.Box):
         )
         self._popup_switch.connect("notify::active", self._on_popup_toggled)
         group.add(self._popup_switch)
+
+        self._permission_row = Adw.ActionRow(
+            title="Izin popup",
+            subtitle="Belum diizinkan",
+        )
+        self._permission_button = Gtk.Button(label="Minta izin")
+        self._permission_button.set_valign(Gtk.Align.CENTER)
+        self._permission_button.connect("clicked", self._on_permission_button)
+        self._permission_row.add_suffix(self._permission_button)
+        group.add(self._permission_row)
+        self._update_permission_row()
 
         group.add(
             self._action_row(
@@ -261,13 +276,103 @@ class SettingsPage(Gtk.Box):
         self._repo.set_setting(
             SETTING_REMINDER_ENABLED, "1" if row.get_active() else "0"
         )
+        if (
+            row.get_active()
+            and self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1"
+            and not self._permission_granted()
+        ):
+            self._request_permission(
+                revert_row=self._popup_switch,
+                revert_setting=SETTING_REMINDER_POPUP,
+            )
 
     def _on_popup_toggled(self, row: Adw.SwitchRow, *_args: object) -> None:
         if self._refreshing:
             return
-        self._repo.set_setting(
-            SETTING_REMINDER_POPUP, "1" if row.get_active() else "0"
+        if not row.get_active():
+            self._repo.set_setting(SETTING_REMINDER_POPUP, "0")
+            return
+        if self._permission_granted():
+            self._repo.set_setting(SETTING_REMINDER_POPUP, "1")
+            return
+        self._request_permission(
+            on_granted=lambda: self._repo.set_setting(SETTING_REMINDER_POPUP, "1"),
+            revert_row=row,
+            revert_setting=SETTING_REMINDER_POPUP,
         )
+
+    def _permission_granted(self) -> bool:
+        return (
+            self._repo.get_setting(SETTING_REMINDER_PERMISSION, "0") == "1"
+        )
+
+    def _update_permission_row(self) -> None:
+        granted = self._permission_granted()
+        self._permission_row.set_subtitle(
+            "Diizinkan" if granted else "Belum diizinkan"
+        )
+        self._permission_button.set_label("Uji" if granted else "Minta izin")
+
+    def _on_permission_button(self, _button: Gtk.Button) -> None:
+        if self._permission_granted():
+            self._on_test_notification()
+            return
+        self._request_permission(on_granted=self._on_test_notification)
+
+    def _request_permission(
+        self,
+        *,
+        on_granted: Callable[[], None] | None = None,
+        revert_row: Adw.SwitchRow | None = None,
+        revert_setting: str = SETTING_REMINDER_POPUP,
+    ) -> None:
+        if self._permission_granted():
+            if on_granted is not None:
+                on_granted()
+            return
+        dialog = Adw.AlertDialog(
+            heading="Izinkan popup pemberitahuan?",
+            body=(
+                "IslamicHabits dapat menampilkan pengingat sebagai notifikasi "
+                "desktop. Izin ini hanya dipakai untuk pengingat; tidak ada data "
+                "yang dikirim ke server. Beberapa desktop tetap dapat memblokir "
+                "notifikasi lewat pengaturan sistem."
+            ),
+        )
+        dialog.add_response("cancel", "Nanti")
+        dialog.add_response("allow", "Izinkan")
+        dialog.set_default_response("allow")
+        dialog.set_close_response("cancel")
+        dialog.connect(
+            "response",
+            self._on_permission_response,
+            on_granted,
+            revert_row,
+            revert_setting,
+        )
+        dialog.present(self.get_root() or self)
+
+    def _on_permission_response(
+        self,
+        _dialog: Adw.AlertDialog,
+        response: str,
+        on_granted: Callable[[], None] | None,
+        revert_row: Adw.SwitchRow | None,
+        revert_setting: str,
+    ) -> None:
+        if response == "allow":
+            self._repo.set_setting(SETTING_REMINDER_PERMISSION, "1")
+            self._update_permission_row()
+            if on_granted is not None:
+                on_granted()
+            return
+        if revert_row is not None:
+            self._refreshing = True
+            try:
+                revert_row.set_active(False)
+            finally:
+                self._refreshing = False
+            self._repo.set_setting(revert_setting, "0")
 
     def _on_time_changed(self, row: Adw.EntryRow) -> None:
         if self._refreshing:

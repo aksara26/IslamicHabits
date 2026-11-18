@@ -18,7 +18,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk
 
 from ..logic.constants import SETTING_MUHASABAH_PROMPTS
-from ..logic.repository import MuhasabahRecord, Repository
+from ..logic.repository import Repository
 from .a11y import set_accessible_label
 
 __all__ = ["MuhasabahPage", "DEFAULT_PROMPTS"]

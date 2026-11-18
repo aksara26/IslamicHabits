@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
 from datetime import date, timedelta
+from pathlib import Path
 
 from src.logic.database import connect
 from src.logic.repository import DailyNoteRecord, Repository
@@ -187,6 +189,49 @@ class RepositoryTests(unittest.TestCase):
         self.repo.save_daily_note(DAY, "Catatan yang harus hilang.")
         self.repo.clear_all_data()
         self.assertEqual(self.repo.list_daily_notes(), ())
+
+    def test_photo_memo_is_copied_listed_and_deleted(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            repo = Repository(self.connection, photos_dir=folder_path / "memo")
+            source = folder_path / "pagi.jpg"
+            source.write_bytes(b"\xff\xd8\xff" + b"x" * 32)
+
+            photo = repo.add_memo_photo(DAY, source, caption="Suasana pagi")
+            self.assertEqual(photo.day, DAY)
+            self.assertEqual(photo.caption, "Suasana pagi")
+            self.assertTrue(repo.photo_path(photo).is_file())
+            self.assertEqual(repo.list_memo_photos(DAY), (photo,))
+            self.assertEqual(repo.get_daily_note(DAY).photo_count, 1)
+            self.assertEqual(repo.list_daily_notes()[0].photo_count, 1)
+
+            repo.delete_memo_photo(photo.id)
+            self.assertFalse(repo.photo_path(photo).is_file())
+            self.assertEqual(repo.list_memo_photos(DAY), ())
+            self.assertEqual(repo.list_daily_notes(), ())
+
+    def test_photo_rejects_unsupported_extension(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            repo = Repository(self.connection, photos_dir=folder_path / "memo")
+            source = folder_path / "catatan.txt"
+            source.write_text("bukan foto", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                repo.add_memo_photo(DAY, source)
+
+    def test_clear_all_data_removes_photo_files(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            repo = Repository(self.connection, photos_dir=folder_path / "memo")
+            source = folder_path / "foto.png"
+            source.write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 32)
+            photo = repo.add_memo_photo(DAY, source)
+            path = repo.photo_path(photo)
+
+            repo.clear_all_data()
+
+            self.assertFalse(path.exists())
+            self.assertEqual(repo.list_memo_photos(DAY), ())
 
 
 if __name__ == "__main__":

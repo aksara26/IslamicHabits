@@ -17,6 +17,12 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gtk
 
+from ..logic.constants import (
+    SETTING_REMINDER_ENABLED,
+    SETTING_REMINDER_PERMISSION,
+    SETTING_REMINDER_POPUP,
+    SETTING_REMINDER_TIME,
+)
 from ..logic.repository import Repository, WorshipRecord
 from ..logic.statistics import (
     Worship,
@@ -46,7 +52,8 @@ from .history_common import (
 
 __all__ = ["CalendarPage"]
 
-GoToMonthCallback = Callable[[date], None]
+OpenMemoCallback = Callable[[date], None]
+OpenSettingsCallback = Callable[[], None]
 
 
 class CalendarPage(Gtk.Box):
@@ -57,11 +64,15 @@ class CalendarPage(Gtk.Box):
         repository: Repository,
         *,
         on_open_day: OpenDayCallback,
+        on_open_memo: OpenMemoCallback | None = None,
+        on_open_settings: OpenSettingsCallback | None = None,
         on_toast: ToastCallback | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_open_day = on_open_day
+        self._on_open_memo = on_open_memo
+        self._on_open_settings = on_open_settings
         self._on_toast = on_toast
 
         today = date.today()
@@ -71,6 +82,8 @@ class CalendarPage(Gtk.Box):
         self._filter_keys: list[FilterKey] = [ALL_FILTER]
         self._show_archived = False
         self._syncing_filter = False
+        self._reminder_enabled = False
+        self._reminder_time = "20:00"
 
         self._build_controls()
         self._build_content()
@@ -120,14 +133,45 @@ class CalendarPage(Gtk.Box):
         archive.connect("toggled", self._on_archive_toggled)
         filters.append(archive)
 
-        help_label = Gtk.Label(label="Simbol: ○ kosong · ◐ sebagian · ● penuh · ✎ ada catatan")
+        help_label = Gtk.Label(
+            label=(
+                "Simbol: ○ kosong · ◐ sebagian · ● penuh · ✎ catatan · "
+                "◷ pengingat hari ini"
+            )
+        )
         help_label.set_hexpand(True)
         help_label.set_xalign(1)
         help_label.set_wrap(True)
-        help_label.set_max_width_chars(28)
+        help_label.set_max_width_chars(30)
         help_label.add_css_class("ih-hint")
         filters.append(help_label)
         self.append(filters)
+
+        reminder = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        reminder.add_css_class("ih-card")
+        reminder.set_margin_start(18)
+        reminder.set_margin_end(18)
+        reminder.set_margin_bottom(6)
+
+        icon = Gtk.Image.new_from_icon_name("appointment-soon-symbolic")
+        icon.set_valign(Gtk.Align.CENTER)
+        self._reminder_label = Gtk.Label(label="")
+        self._reminder_label.set_xalign(0)
+        self._reminder_label.set_hexpand(True)
+        self._reminder_label.set_wrap(True)
+        self._reminder_label.add_css_class("ih-hint")
+        self._reminder_button = Gtk.Button(label="Atur")
+        self._reminder_button.set_valign(Gtk.Align.CENTER)
+        self._reminder_button.set_sensitive(self._on_open_settings is not None)
+        self._reminder_button.connect("clicked", self._on_reminder_settings)
+        reminder.append(icon)
+        reminder.append(self._reminder_label)
+        reminder.append(self._reminder_button)
+        self.append(reminder)
+
+    def _on_reminder_settings(self, _button: Gtk.Button) -> None:
+        if self._on_open_settings is not None:
+            self._on_open_settings()
 
     def _build_content(self) -> None:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -165,12 +209,19 @@ class CalendarPage(Gtk.Box):
         self._calendar_detail_note.add_css_class("dim-label")
         box.append(self._calendar_detail_note)
 
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         open_selected = Gtk.Button(label="Isi hari ini di Hari Ini")
-        open_selected.set_halign(Gtk.Align.START)
         open_selected.connect(
             "clicked", lambda *_: self._on_open_day(self._calendar_selected)
         )
-        box.append(open_selected)
+        actions.append(open_selected)
+
+        open_memo = Gtk.Button(label="Buka Memo")
+        open_memo.add_css_class("ih-quick")
+        open_memo.set_sensitive(self._on_open_memo is not None)
+        open_memo.connect("clicked", self._on_open_memo_clicked)
+        actions.append(open_memo)
+        box.append(actions)
 
         month_title = Gtk.Label(label="Ringkasan per kegiatan")
         month_title.set_xalign(0)
@@ -250,7 +301,35 @@ class CalendarPage(Gtk.Box):
     def refresh(self) -> None:
         self._sync_filter_model()
         self._title.set_label(f"{BULAN[self._anchor.month - 1]} {self._anchor.year}")
+        self._refresh_reminder()
         self._refresh_month()
+
+    def _refresh_reminder(self) -> None:
+        enabled = self._repo.get_setting(SETTING_REMINDER_ENABLED, "0") == "1"
+        time = self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
+        popup = self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1"
+        permission = (
+            self._repo.get_setting(SETTING_REMINDER_PERMISSION, "0") == "1"
+        )
+        if enabled:
+            text = f"Pengingat harian aktif pukul {time}."
+            if not popup:
+                text += " Popup dimatikan."
+            elif permission:
+                text += " Popup diizinkan."
+            else:
+                text += " Popup belum diizinkan; atur di Pengaturan."
+            self._reminder_button.set_label("Atur")
+        else:
+            text = (
+                "Pengingat harian belum aktif. Aktifkan agar hari yang terlewat "
+                "tidak terlupa."
+            )
+            self._reminder_button.set_label("Aktifkan")
+        self._reminder_label.set_label(text)
+        set_accessible_label(self._reminder_label, text)
+        self._reminder_enabled = enabled
+        self._reminder_time = time
 
     def go_current(self) -> None:
         self.go_to_day(date.today())
@@ -308,12 +387,16 @@ class CalendarPage(Gtk.Box):
             state = states[day_number]
             captured_day = date(first.year, first.month, day_number)
             has_note = captured_day in noted_days
+            is_today = captured_day == date.today()
             button = Gtk.Button()
             button.add_css_class("ih-calendar-day")
             if captured_day == self._calendar_selected:
                 button.add_css_class("ih-selected")
             inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            number = Gtk.Label(label=str(day_number))
+            reminder_mark = is_today and self._reminder_enabled
+            number = Gtk.Label(
+                label=f"{day_number}{' ◷' if reminder_mark else ''}"
+            )
             mark = Gtk.Label(label=STATE_SYMBOL[state])
             apply_state_class(mark, state)
             note_mark = Gtk.Label(label="✎" if has_note else "")
@@ -325,7 +408,13 @@ class CalendarPage(Gtk.Box):
             button.set_child(inner)
 
             note_text = " · ada catatan harian" if has_note else ""
-            label = f"{day_number} {BULAN[first.month - 1]}, {STATE_TEXT[state]}{note_text}"
+            reminder_text = (
+                f" · pengingat pukul {self._reminder_time}" if reminder_mark else ""
+            )
+            label = (
+                f"{day_number} {BULAN[first.month - 1]}, {STATE_TEXT[state]}"
+                f"{note_text}{reminder_text}"
+            )
             button.set_tooltip_text(label)
             set_accessible_label(button, label)
             button.connect("clicked", self._on_calendar_day, captured_day)
@@ -385,13 +474,19 @@ class CalendarPage(Gtk.Box):
                 Adw.ActionRow(title="Tidak ada kegiatan aktif pada hari ini")
             )
 
-        note = self._repo.get_daily_note(day).text
-        self._calendar_detail_note.set_label(
-            f"Catatan harian: {note}" if note else "Catatan harian: belum ada."
-        )
-        set_accessible_label(
-            self._calendar_detail_note, self._calendar_detail_note.get_label()
-        )
+        note = self._repo.get_daily_note(day)
+        if note.text:
+            text = f"Catatan harian: {note.text}"
+        else:
+            text = "Catatan harian: belum ada."
+        if note.photo_count:
+            text += f" · {note.photo_count} foto memo"
+        self._calendar_detail_note.set_label(text)
+        set_accessible_label(self._calendar_detail_note, text)
+
+    def _on_open_memo_clicked(self, _button: Gtk.Button) -> None:
+        if self._on_open_memo is not None:
+            self._on_open_memo(self._calendar_selected)
 
     def _on_calendar_day(self, _button: Gtk.Button, day: date) -> None:
         self._calendar_selected = day

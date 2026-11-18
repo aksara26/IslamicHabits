@@ -19,6 +19,7 @@ from .defaults import DEFAULT_CATEGORIES, DEFAULT_WORSHIPS, HABIT_CATEGORY
 __all__ = [
     "default_data_dir",
     "default_database_path",
+    "default_photos_dir",
     "connect",
     "initialize",
     "get_meta",
@@ -74,6 +75,15 @@ CREATE TABLE IF NOT EXISTS catatan_harian (
     teks TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS memo_foto (
+    id INTEGER PRIMARY KEY,
+    tanggal TEXT NOT NULL,
+    berkas TEXT NOT NULL UNIQUE,
+    keterangan TEXT NOT NULL DEFAULT '',
+    urutan INTEGER NOT NULL DEFAULT 0,
+    dibuat_pada TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS pengaturan (
     kunci TEXT PRIMARY KEY,
     nilai TEXT NOT NULL
@@ -81,16 +91,28 @@ CREATE TABLE IF NOT EXISTS pengaturan (
 
 CREATE INDEX IF NOT EXISTS idx_catatan_tanggal ON catatan(tanggal);
 CREATE INDEX IF NOT EXISTS idx_ibadah_kategori ON ibadah(kategori_id, urutan);
+CREATE INDEX IF NOT EXISTS idx_memo_foto_tanggal ON memo_foto(tanggal, urutan);
 """
 
 # Ditambah satu entri per versi skema baru. Versi 1 dibuat oleh skema awal;
-# versi 2 menambahkan catatan harian.
+# versi 2 menambahkan catatan harian; versi 3 menambahkan foto memo.
 MIGRATIONS: dict[int, str] = {
     2: """
     CREATE TABLE IF NOT EXISTS catatan_harian (
         tanggal TEXT PRIMARY KEY,
         teks TEXT NOT NULL DEFAULT ''
     );
+    """,
+    3: """
+    CREATE TABLE IF NOT EXISTS memo_foto (
+        id INTEGER PRIMARY KEY,
+        tanggal TEXT NOT NULL,
+        berkas TEXT NOT NULL UNIQUE,
+        keterangan TEXT NOT NULL DEFAULT '',
+        urutan INTEGER NOT NULL DEFAULT 0,
+        dibuat_pada TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_memo_foto_tanggal ON memo_foto(tanggal, urutan);
     """,
 }
 
@@ -107,6 +129,12 @@ def default_database_path() -> Path:
     """Berkas SQLite utama aplikasi."""
 
     return default_data_dir() / "islamichabits.sqlite3"
+
+
+def default_photos_dir() -> Path:
+    """Folder berkas foto memo, terpisah dari basis data."""
+
+    return default_data_dir() / "memo"
 
 
 def get_meta(connection: sqlite3.Connection, key: str) -> str | None:

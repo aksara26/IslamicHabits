@@ -19,6 +19,17 @@
   </developer>
   <url type="homepage">https://github.com/aksara26/IslamicHabits</url>
   <releases>
+    <release version="0.3.0" date="2026-11-18">
+      <description>
+        <p>
+          Halaman Memo baru dengan editor tersimpan otomatis dan lampiran foto,
+          ditautkan dari Hari Ini, Kalender, dan Histori Catatan. Pengingat kini
+          meminta izin popup di dalam aplikasi sebelum mengirim notifikasi, dan
+          baris daftar dipadatkan agar lebih banyak ibadah terlihat sekaligus.
+          Skema serta format ekspor naik ke v3 dengan migrasi otomatis.
+        </p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-18">
       <description>
         <p>

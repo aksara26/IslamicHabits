@@ -8,6 +8,7 @@ sendiri, supaya ketiganya tidak tercampur.
 from __future__ import annotations
 
 from datetime import date
+from typing import Callable
 
 import gi
 
@@ -31,11 +32,13 @@ class NoteHistoryPage(Gtk.Box):
         repository: Repository,
         *,
         on_open_day: OpenDayCallback,
+        on_open_memo: Callable[[date], None] | None = None,
         on_toast: ToastCallback | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_open_day = on_open_day
+        self._on_open_memo = on_open_memo
         self._on_toast = on_toast
         self._visible_notes: tuple[DailyNoteRecord, ...] = ()
         self._selected: DailyNoteRecord | None = None
@@ -113,6 +116,14 @@ class NoteHistoryPage(Gtk.Box):
         open_button.set_sensitive(False)
         self._open_button = open_button
         preview.append(open_button)
+
+        memo_button = Gtk.Button(label="Buka Memo")
+        memo_button.add_css_class("ih-quick")
+        memo_button.set_halign(Gtk.Align.START)
+        memo_button.set_sensitive(False)
+        memo_button.connect("clicked", lambda *_: self._open_memo_selected())
+        self._memo_button = memo_button
+        preview.append(memo_button)
         self.append(preview)
 
     # -- data ------------------------------------------------------------
@@ -137,13 +148,19 @@ class NoteHistoryPage(Gtk.Box):
 
         clear_list(self._notes_list)
         for note in notes:
+            subtitle = self._short_preview(note.text)
+            if note.photo_count:
+                photos = f"{note.photo_count} foto"
+                subtitle = f"{photos} · {subtitle}" if subtitle else photos
             row = Adw.ActionRow(
                 title=format_day(note.day),
-                subtitle=self._short_preview(note.text),
+                subtitle=subtitle,
             )
             row.add_suffix(Gtk.Image.new_from_icon_name("go-next-symbolic"))
             set_accessible_label(
-                row, f"{format_day(note.day)}: {note.text}. Tekan Enter untuk membuka."
+                row,
+                f"{format_day(note.day)}: {subtitle or 'tanpa teks'}. "
+                "Tekan Enter untuk membuka.",
             )
             self._notes_list.append(row)
 
@@ -160,7 +177,7 @@ class NoteHistoryPage(Gtk.Box):
                 "Tidak ada catatan harian yang cocok."
                 if query
                 else (
-                    "Tulis catatan bebas di halaman Hari Ini. Catatan itu akan "
+                    "Tulis memo di halaman Memo. Catatan dan fotonya akan "
                     "muncul di sini, terpisah dari catatan kegiatan dan muhasabah."
                 )
             )
@@ -176,12 +193,17 @@ class NoteHistoryPage(Gtk.Box):
         if self._selected is None:
             self._preview_text.set_label("Pilih satu catatan untuk membacanya.")
             self._open_button.set_sensitive(False)
+            self._memo_button.set_sensitive(False)
             return
+        text = self._selected.text or "Belum ada teks memo."
+        if self._selected.photo_count:
+            text += f"\n\n{self._selected.photo_count} foto terlampir."
         self._preview_text.set_label(
-            f"{format_day(self._selected.day)}\n\n{self._selected.text}"
+            f"{format_day(self._selected.day)}\n\n{text}"
         )
         set_accessible_label(self._preview_text, self._preview_text.get_label())
         self._open_button.set_sensitive(True)
+        self._memo_button.set_sensitive(self._on_open_memo is not None)
 
     # -- interaksi -------------------------------------------------------
 
@@ -209,6 +231,10 @@ class NoteHistoryPage(Gtk.Box):
     def _open_selected(self) -> None:
         if self._selected is not None:
             self._on_open_day(self._selected.day)
+
+    def _open_memo_selected(self) -> None:
+        if self._selected is not None and self._on_open_memo is not None:
+            self._on_open_memo(self._selected.day)
 
     def focus_search(self) -> None:
         self._search_entry.grab_focus()

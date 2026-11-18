@@ -16,12 +16,14 @@ from ..logic.constants import (
     APP_NAME,
     META_ONBOARDING_DONE,
     SETTING_REMINDER_ENABLED,
+    SETTING_REMINDER_PERMISSION,
     SETTING_REMINDER_POPUP,
     SETTING_REMINDER_TIME,
     SETTING_THEME,
 )
 from ..logic.defaults import HABIT_CATEGORY
 from ..logic.repository import Repository
+from ..logic.statistics import compute_daily
 from .a11y import set_accessible_label
 from .theme import apply_theme
 
@@ -48,6 +50,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._history_page = self._make_history_page()
         self._calendar_page = self._make_calendar_page()
         self._note_history_page = self._make_note_history_page()
+        self._memo_page = self._make_memo_page()
         self._muhasabah_page = self._make_muhasabah_page()
         self._manage_page = self._make_manage_page()
         self._settings_page = self._make_settings_page()
@@ -67,6 +70,12 @@ class MainWindow(Adw.ApplicationWindow):
             "note-history",
             "Histori Catatan",
             "text-x-generic-symbolic",
+        )
+        self._stack.add_titled_with_icon(
+            self._memo_page,
+            "memo",
+            "Memo",
+            "insert-image-symbolic",
         )
         self._stack.add_titled_with_icon(
             self._muhasabah_page,
@@ -168,6 +177,7 @@ class MainWindow(Adw.ApplicationWindow):
             "history-year": lambda *_: self._go_history("year"),
             "go-calendar": lambda *_: self._go_calendar(),
             "go-note-history": lambda *_: self.go_page("note-history"),
+            "go-memo": lambda *_: self.go_page("memo"),
             "go-muhasabah": lambda *_: self.go_page("muhasabah"),
             "go-manage": lambda *_: self.go_page("manage"),
             "go-settings": lambda *_: self.go_page("settings"),
@@ -193,6 +203,7 @@ class MainWindow(Adw.ApplicationWindow):
             on_add_worship=lambda: self.open_worship_dialog(),
             on_add_habit=lambda: self.open_habit_dialog(),
             on_data_changed=self.refresh_history,
+            on_open_memo=self._open_memo,
         )
 
     def _make_history_page(self):
@@ -211,6 +222,8 @@ class MainWindow(Adw.ApplicationWindow):
         return CalendarPage(
             self._repo,
             on_open_day=self._open_day,
+            on_open_memo=self._open_memo,
+            on_open_settings=lambda: self.go_page("settings"),
             on_toast=self._toast,
         )
 
@@ -220,8 +233,26 @@ class MainWindow(Adw.ApplicationWindow):
         return NoteHistoryPage(
             self._repo,
             on_open_day=self._open_day,
+            on_open_memo=self._open_memo,
             on_toast=self._toast,
         )
+
+    def _make_memo_page(self):
+        from .memo_page import MemoPage
+
+        return MemoPage(
+            self._repo,
+            on_data_changed=self._on_memo_changed,
+            on_toast=self._toast,
+        )
+
+    def _on_memo_changed(self) -> None:
+        """Segarkan halaman lain tanpa memuat ulang editor Memo yang aktif."""
+
+        self._today_page.refresh()
+        self._history_page.refresh()
+        self._calendar_page.refresh()
+        self._note_history_page.refresh()
 
     def _make_muhasabah_page(self):
         from .muhasabah_page import MuhasabahPage
@@ -273,6 +304,12 @@ class MainWindow(Adw.ApplicationWindow):
         self.go_page("today")
         self._today_page.set_day(day)
 
+    def _open_memo(self, day: date) -> None:
+        """Buka halaman Memo pada tanggal tertentu."""
+
+        self.go_page("memo")
+        self._memo_page.set_day(day)
+
     def _on_search(self) -> None:
         if self._stack.get_visible_child_name() == "note-history":
             self._note_history_page.focus_search()
@@ -284,6 +321,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._history_page.refresh()
         self._calendar_page.refresh()
         self._note_history_page.refresh()
+        self._memo_page.refresh()
 
     def refresh_today_and_history(self) -> None:
         self._today_page.refresh()
@@ -429,46 +467,71 @@ class MainWindow(Adw.ApplicationWindow):
         now = datetime.now()
         if now.strftime("%H:%M") >= target and self._reminder_day != now.date():
             self._reminder_day = now.date()
-            if self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1":
+            worships, entries = self._repo.statistics_inputs(
+                start=now.date(), end=now.date()
+            )
+            summary = compute_daily(now.date(), worships, entries)
+            note = self._repo.get_daily_note(now.date())
+            complete = summary.expected > 0 and summary.completed >= summary.expected
+            has_memo = bool(note.text.strip()) or note.photo_count > 0
+            if complete and has_memo:
+                return True
+            popup = self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1"
+            if popup:
                 self._send_notification(
                     "IslamicHabits",
-                    "Waktunya mencatat ibadah dan menulis catatan hari ini.",
+                    "Waktunya mencatat ibadah dan menulis memo hari ini.",
                 )
             self._toast(
-                "Waktunya mencatat ibadah dan menulis muhasabah.",
-                "Buka Muhasabah",
-                self.open_muhasabah_today,
+                "Waktunya mencatat ibadah dan menulis memo hari ini.",
+                "Buka Memo",
+                lambda: self._open_memo(now.date()),
             )
         return True
 
-    def _send_notification(self, title: str, body: str) -> None:
-        """Kirim popup notifikasi desktop; aman bila aplikasi belum terdaftar."""
+    def _send_notification(self, title: str, body: str) -> bool:
+        """Kirim popup notifikasi desktop setelah izin pengguna diberikan."""
 
+        if self._repo.get_setting(SETTING_REMINDER_PERMISSION, "0") != "1":
+            return False
         application = self.get_application()
         if application is None:
-            return
+            return False
         notification = Gio.Notification.new(title)
         notification.set_body(body)
         notification.set_priority(Gio.NotificationPriority.NORMAL)
-        notification.set_default_action("app.open-muhasabah")
+        notification.set_default_action("app.open-memo")
         try:
             application.send_notification("islamichabits-reminder", notification)
         except Exception:
             # Notifikasi tidak boleh menghalangi pencatatan bila desktop
             # menolaknya atau belum memberikan izin.
-            pass
+            return False
+        return True
 
     def _send_test_notification(self, *_args: object) -> None:
-        self._send_notification(
+        sent = self._send_notification(
             "IslamicHabits", "Ini contoh popup pemberitahuan IslamicHabits."
         )
-        self._toast("Notifikasi uji dikirim", None, None)
+        if sent:
+            self._toast("Notifikasi uji dikirim", None, None)
+        else:
+            self._toast(
+                "Popup belum diizinkan. Aktifkan izin di Pengaturan.",
+                "Buka Pengaturan",
+                lambda: self.go_page("settings"),
+            )
 
     def open_muhasabah_today(self) -> None:
         """Buka Muhasabah pada hari ini, dipakai toast dan notifikasi."""
 
         self._muhasabah_page.go_today()
         self.go_page("muhasabah")
+
+    def open_memo_today(self) -> None:
+        """Buka Memo pada hari ini, dipakai aksi notifikasi desktop."""
+
+        self._open_memo(date.today())
 
     def _show_shortcuts(self) -> None:
         dialog = Adw.ShortcutsDialog()
@@ -483,6 +546,7 @@ class MainWindow(Adw.ApplicationWindow):
                     ("Kalender", "<Ctrl>2"),
                     ("Riwayat (tahunan)", "<Ctrl>3"),
                     ("Histori Catatan", "<Ctrl>4"),
+                    ("Memo", "<Ctrl>5"),
                 ),
             ),
             (

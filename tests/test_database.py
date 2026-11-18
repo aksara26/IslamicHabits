@@ -19,6 +19,7 @@ TABLES = (
     "catatan",
     "muhasabah",
     "catatan_harian",
+    "memo_foto",
     "pengaturan",
 )
 
@@ -157,6 +158,53 @@ class DatabaseTests(unittest.TestCase):
             connection.execute("SELECT nilai FROM warisan").fetchone()["nilai"],
             "tetap ada",
         )
+
+    def test_migration_from_schema_v2_creates_memo_photos(self) -> None:
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        self.addCleanup(connection.close)
+        connection.execute(
+            "CREATE TABLE meta (kunci TEXT PRIMARY KEY, nilai TEXT NOT NULL)"
+        )
+        connection.execute(
+            "INSERT INTO meta (kunci, nilai) VALUES ('schema_version', '2')"
+        )
+        connection.execute(
+            "CREATE TABLE catatan_harian (tanggal TEXT PRIMARY KEY, teks TEXT NOT NULL DEFAULT '')"
+        )
+        connection.execute(
+            "INSERT INTO catatan_harian (tanggal, teks) VALUES ('2026-11-18', 'Memo lama')"
+        )
+        connection.commit()
+
+        initialize(connection, seed=False)
+
+        names = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        self.assertIn("memo_foto", names)
+        self.assertEqual(
+            connection.execute(
+                "SELECT nilai FROM meta WHERE kunci = 'schema_version'"
+            ).fetchone()["nilai"],
+            str(SCHEMA_VERSION),
+        )
+        self.assertEqual(
+            connection.execute(
+                "SELECT teks FROM catatan_harian WHERE tanggal = '2026-11-18'"
+            ).fetchone()["teks"],
+            "Memo lama",
+        )
+        indexes = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'index'"
+            )
+        }
+        self.assertIn("idx_memo_foto_tanggal", indexes)
 
     def test_database_file_is_created_in_requested_directory(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

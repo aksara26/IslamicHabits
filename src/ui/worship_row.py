@@ -52,6 +52,7 @@ class WorshipRow(Adw.ActionRow):
         self._on_value_changed = on_value_changed
         self._on_details = on_details
         self._updating = False
+        self.add_css_class("ih-row")
 
         self.set_title(worship.name)
         self.set_subtitle(self._subtitle(entry))
@@ -107,6 +108,14 @@ class WorshipRow(Adw.ActionRow):
         self.add_suffix(dropdown)
 
     def _subtitle(self, entry: EntryRecord | None) -> str:
+        """Ringkas keterangan baris; kosong berarti baris tetap satu tingkat.
+
+        Jenis isian sudah terlihat dari kontrolnya (centang, angka, atau
+        status), jadi label seperti "Centang" atau "Pilih status" hanya
+        menambah tinggi tanpa informasi baru. Yang dipertahankan hanya target
+        angka, jam, dan catatan.
+        """
+
         parts: list[str] = []
         if self.worship.kind is EntryKind.NUMBER:
             target = self.worship.target
@@ -115,12 +124,6 @@ class WorshipRow(Adw.ActionRow):
                 if self.worship.unit:
                     amount += f" {self.worship.unit}"
                 parts.append(f"Target {amount}")
-            else:
-                parts.append("Angka")
-        elif self.worship.kind is EntryKind.STATUS:
-            parts.append("Pilih status")
-        else:
-            parts.append("Centang")
 
         if entry is not None and entry.time:
             parts.append(entry.time)

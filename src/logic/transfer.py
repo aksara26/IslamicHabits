@@ -7,6 +7,8 @@ sehingga bisa diuji tanpa GTK.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import sqlite3
 from dataclasses import dataclass, field
@@ -24,7 +26,7 @@ from .constants import (
     SETTING_BACKUP_FOLDER,
 )
 from .database import default_data_dir
-from .repository import Repository
+from .repository import PHOTO_SUFFIXES, Repository
 from .statistics import StatusValue
 
 __all__ = [
@@ -49,6 +51,7 @@ TABLES = (
     "catatan",
     "muhasabah",
     "catatan_harian",
+    "memo_foto",
     "pengaturan",
     "meta",
 )
@@ -78,6 +81,7 @@ COLUMNS: dict[str, tuple[str, ...]] = {
     ),
     "muhasabah": ("tanggal", "teks", "jawaban"),
     "catatan_harian": ("tanggal", "teks"),
+    "memo_foto": ("id", "tanggal", "berkas", "keterangan", "urutan", "dibuat_pada"),
     "pengaturan": ("kunci", "nilai"),
     "meta": ("kunci", "nilai"),
 }
@@ -88,6 +92,7 @@ PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "catatan": ("ibadah_id", "tanggal"),
     "muhasabah": ("tanggal",),
     "catatan_harian": ("tanggal",),
+    "memo_foto": ("id",),
     "pengaturan": ("kunci",),
     "meta": ("kunci",),
 }
@@ -99,6 +104,7 @@ INSERT_ORDER = (
     "catatan",
     "muhasabah",
     "catatan_harian",
+    "memo_foto",
     "pengaturan",
     "meta",
 )
@@ -139,6 +145,29 @@ def _rows(connection: sqlite3.Connection, table: str) -> list[dict[str, Any]]:
     return [dict(row) for row in connection.execute(f"SELECT * FROM {table}")]
 
 
+def _safe_photo_name(name: str) -> bool:
+    """Nama berkas foto harus polos dan berakhiran gambar yang didukung."""
+
+    if not name or name != Path(name).name or "/" in name or "\\" in name:
+        return False
+    return Path(name).suffix.lower() in PHOTO_SUFFIXES
+
+
+def _photos_for_export(repository: Repository, rows: list[dict[str, Any]]) -> dict[str, str]:
+    photos: dict[str, str] = {}
+    for row in rows:
+        name = str(row["berkas"])
+        if not _safe_photo_name(name):
+            continue
+        path = repository.photos_dir / name
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        photos[name] = base64.b64encode(data).decode("ascii")
+    return photos
+
+
 def create_export(repository: Repository) -> dict[str, Any]:
     """Bangun objek JSON dari seluruh isi basis data."""
 
@@ -150,6 +179,7 @@ def create_export(repository: Repository) -> dict[str, Any]:
         "app_version": APP_VERSION,
         "exported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "data": data,
+        "photos": _photos_for_export(repository, data["memo_foto"]),
     }
 
 
@@ -318,6 +348,28 @@ def validate_payload(payload: Any) -> None:
         _check_date(row["tanggal"], "tanggal")
         _check_text(row["teks"], "catatan_harian.teks")
 
+    for row in data.get("memo_foto", []):
+        _check_date(row["tanggal"], "tanggal")
+        _check_text(row["berkas"], "memo_foto.berkas")
+        if not _safe_photo_name(str(row["berkas"])):
+            raise TransferError("Nama berkas foto tidak valid")
+        _check_text(row["keterangan"], "memo_foto.keterangan")
+        _check_int(row["urutan"], "memo_foto.urutan")
+        _check_text(row["dibuat_pada"], "memo_foto.dibuat_pada")
+
+    photos = payload.get("photos", {})
+    if not isinstance(photos, dict):
+        raise TransferError("Bagian foto bukan objek")
+    for name, encoded in photos.items():
+        if not isinstance(name, str) or not _safe_photo_name(name):
+            raise TransferError("Nama berkas foto tidak valid")
+        if not isinstance(encoded, str):
+            raise TransferError(f"Foto {name} bukan teks base64")
+        try:
+            base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise TransferError(f"Foto {name} bukan base64 yang valid") from error
+
     for table in ("pengaturan", "meta"):
         for row in data[table]:
             _check_text(row["nilai"], f"{table}.nilai")
@@ -364,6 +416,12 @@ def import_payload(
     inserted = {table: 0 for table in TABLES}
     skipped = {table: 0 for table in TABLES}
     deleted = {table: 0 for table in TABLES}
+    old_photo_names: list[str] = []
+    if mode == "replace":
+        old_photo_names = [
+            str(row["berkas"])
+            for row in connection.execute("SELECT berkas FROM memo_foto")
+        ]
 
     try:
         connection.execute("BEGIN")
@@ -414,6 +472,21 @@ def import_payload(
     except sqlite3.Error as error:
         connection.rollback()
         raise TransferError(f"Gagal mengimpor data: {error}") from error
+
+    photos = payload.get("photos", {})
+    if mode == "replace":
+        for name in old_photo_names:
+            if name not in photos and _safe_photo_name(name):
+                (repository.photos_dir / name).unlink(missing_ok=True)
+    if photos:
+        try:
+            repository.photos_dir.mkdir(parents=True, exist_ok=True)
+            for name, encoded in photos.items():
+                (repository.photos_dir / name).write_bytes(
+                    base64.b64decode(encoded)
+                )
+        except OSError as error:
+            raise TransferError(f"Gagal menulis berkas foto: {error}") from error
 
     return ImportSummary(inserted=inserted, skipped=skipped, deleted=deleted)
 
