@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kurakura.IslamicHabits</id>
+  <name>IslamicHabits</name>
+  <summary>Catat ibadah harian secara lokal</summary>
+  <description>
+    <p>
+      IslamicHabits membantu mencatat dan merefleksikan ibadah harian secara
+      pribadi. Semua isian dilakukan sendiri oleh pengguna, data tersimpan
+      lokal, tanpa akun dan tanpa server.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.kurakura.IslamicHabits.desktop</launchable>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.kurakura">
+    <name>kurakura</name>
+  </developer>
+  <url type="homepage">https://github.com/kurakura/IslamicHabits</url>
+  <releases>
+    <release version="0.1.0" date="2026-11-18">
+      <description><p>Kerangka awal: identitas aplikasi dan statistik.</p></description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

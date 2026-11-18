@@ -107,6 +107,23 @@ sudo dnf install meson ninja-build python3 python3-gobject gtk4 libadwaita \
 
 Pasang juga `flatpak` dan `flatpak-builder` bila ingin membuat paket Flatpak. Daftar paket di atas bisa berbeda tergantung kebutuhan akhir proyek, jadi sesuaikan saat implementasi.
 
+### Menjalankan dan menguji dari sumber
+
+```bash
+python3 -m src.main          # jalankan jendela kosong
+python3 -m unittest discover -s tests -q
+```
+
+Build, uji, dan instal dengan Meson:
+
+```bash
+meson setup builddir
+meson test -C builddir
+DESTDIR=/tmp/install-root meson install -C builddir
+```
+
+Setelah terpasang, jalankan `islamichabits`. Paket Python dipasang sebagai `islamichabits`, sedangkan direktori sumber tetap bernama `src`.
+
 ---
 
 ## 4. Arsitektur
@@ -126,16 +143,22 @@ IslamicHabits/
 ├── README.md
 ├── LICENSE                 # GPL-3.0-or-later
 ├── .gitignore              # data pengguna & build tidak masuk git
-├── meson.build             # belum dibuat
-├── data/                   # belum dibuat: ikon, desktop entry, AppStream, GSettings
+├── meson.build             # build + install
+├── data/
+│   ├── io.github.kurakura.IslamicHabits.desktop
+│   ├── io.github.kurakura.IslamicHabits.metainfo.xml
+│   └── icons/hicolor/scalable/apps/io.github.kurakura.IslamicHabits.svg
 ├── src/
 │   ├── __init__.py
+│   ├── islamichabits       # launcher setelah terpasang
+│   ├── main.py             # Adw.Application
 │   ├── logic/
 │   │   ├── __init__.py
 │   │   ├── constants.py    # APP_NAME, APP_ID, versi skema/ekspor
 │   │   └── statistics.py   # aturan harian/bulanan/tahunan, murni Python
 │   └── ui/
 │       ├── __init__.py
+│       ├── main_window.py  # jendela kosong + placeholder
 │       └── trend_line.py   # Gtk.DrawingArea + Cairo
 ├── tests/
 │   └── test_statistics.py  # 14 pengujian logika, tanpa GTK
@@ -472,7 +495,7 @@ Fitur inti, bukan pelengkap, karena tidak ada server dan data hanya ada di satu 
 - README (dokumen ini) berisi cara instal untuk tiap format
 - Lisensi dipilih sebelum rilis publik
 
-Lisensi sudah ditetapkan: **GPL-3.0-or-later** (berkas `LICENSE`). Repositori juga sudah diinisialisasi dengan git; `.gitignore` menyembunyikan data pengguna dan berkas build.
+Lisensi sudah ditetapkan: **GPL-3.0-or-later** (berkas `LICENSE`). Repositori juga sudah diinisialisasi dengan git; `.gitignore` menyembunyikan data pengguna dan berkas build. Metadata AppStream saat ini masih memberi satu peringatan karena URL repositori GitHub belum reachable; peringatan akan hilang setelah repositori publik dibuat.
 
 Menerbitkan ke Flathub adalah langkah terpisah dengan aturannya sendiri dan tidak wajib karena distribusi lewat GitHub.
 
@@ -481,7 +504,7 @@ Menerbitkan ke Flathub adalah langkah terpisah dengan aturannya sendiri dan tida
 ## 17. Rencana Pengerjaan
 
 - [x] 1. Tetapkan nama (`IslamicHabits`), ID (`io.github.kurakura.IslamicHabits`), lisensi (GPL-3.0-or-later), format ekspor JSON, dan target v1 = Fedora 45
-- [ ] 2. Siapkan lingkungan pengembangan dan pastikan jendela kosong bisa berjalan
+- [x] 2. Siapkan lingkungan pengembangan dan jendela kosong (`Adw.Application` + `Adw.StatusPage`), plus `meson.build`, desktop entry, metadata AppStream, dan ikon
 - [ ] 3. Bangun lapisan data dan skema, disertai pengujian
 - [ ] 4. Jendela utama dan navigasi
 - [ ] 5. Halaman **Hari Ini** dengan tiga jenis baris ibadah
@@ -495,6 +518,8 @@ Menerbitkan ke Flathub adalah langkah terpisah dengan aturannya sendiri dan tida
 - [ ] 13. Pengemasan dan rilis di GitHub
 
 **Rekomendasi:** selesaikan sampai langkah 5 dan 6 lebih dulu, pakai sendiri beberapa hari, baru lanjutkan.
+
+Catatan: jendela kosong sudah lolos uji impor, pembuatan objek, dan instalasi Meson di lingkungan headless. Uji visual di sesi GNOME nyata masih perlu dilakukan sebelum menambah halaman.
 
 ---
 
