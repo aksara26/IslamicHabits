@@ -3,19 +3,206 @@
  * Nilai di bawah dipakai pada tema terang. Bila tema gelap aktif,
  * style-dark.css mengganti definisi warna dengan varian yang lebih terang agar
  * kontras tetap baik. Penanda status memakai simbol dan teks, bukan warna saja.
+ *
+ * Berkas ini dimuat pada prioritas di atas tema GTK pengguna supaya warna
+ * aplikasi tidak berubah hanya karena tema pihak ketiga terpasang. Karena itu
+ * status hover/pilih untuk widget dasar juga ditulis di sini; tanpa itu,
+ * aturan tema pengguna akan hilang dan baris tidak lagi memberi umpan balik.
  */
 
 @define-color ih-sage #284a3a;
 @define-color ih-accent #466951;
-@define-color ih-surface #f6f8f4;
+@define-color ih-surface #edf2ec;
 @define-color ih-surface-card #ffffff;
-@define-color ih-line #d8e2d9;
+@define-color ih-hover #eef4ef;
+@define-color ih-selected #e1ebe3;
+@define-color ih-line #dae4db;
 @define-color ih-ink #1c2b24;
 @define-color ih-muted #526158;
 @define-color ih-night #101b15;
 @define-color ih-done #356044;
 @define-color ih-pending #5d6a61;
-@define-color ih-gold #8a6a26;
+@define-color ih-gold #866626;
+
+/* Seluruh komponen Adwaita memakai aksen sage, bukan biru bawaan. */
+@define-color accent_color @ih-sage;
+@define-color accent_bg_color @ih-sage;
+@define-color accent_fg_color #ffffff;
+@define-color window_bg_color @ih-surface;
+@define-color window_fg_color @ih-ink;
+@define-color view_bg_color @ih-surface-card;
+@define-color view_fg_color @ih-ink;
+@define-color headerbar_bg_color @ih-surface;
+@define-color headerbar_fg_color @ih-ink;
+@define-color headerbar_border_color @ih-line;
+@define-color card_bg_color @ih-surface-card;
+@define-color card_fg_color @ih-ink;
+@define-color popover_bg_color @ih-surface-card;
+@define-color popover_fg_color @ih-ink;
+@define-color sidebar_bg_color @ih-surface-card;
+@define-color sidebar_fg_color @ih-ink;
+@define-color sidebar_backdrop_color @ih-surface-card;
+@define-color sidebar_shade_color @ih-line;
+@define-color dialog_bg_color @ih-surface-card;
+@define-color dialog_fg_color @ih-ink;
+
+/* ------------------------------------------------------------------ */
+/* Permukaan utama                                                     */
+/* ------------------------------------------------------------------ */
+
+/* Ditulis eksplisit karena tema GTK pengguna dapat memuat aturan literal
+ * (mis. Graphite memakai ``.background { background-color: #2C2C2C }``). */
+window.background,
+window.background.csd,
+window.background.csd > .dialog-host {
+  background-color: @ih-surface;
+  color: @ih-ink;
+}
+
+.sidebar-pane,
+.sidebar-pane .toolbarview,
+.sidebar-pane .navigation-view-page {
+  background-color: @ih-surface-card;
+  color: @ih-ink;
+}
+
+.content-pane,
+.content-pane .toolbarview,
+.content-pane .navigation-view-page {
+  background-color: @ih-surface;
+  color: @ih-ink;
+}
+
+headerbar,
+.top-bar,
+.bottom-bar {
+  background-color: transparent;
+  color: @ih-ink;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Daftar dan baris                                                    */
+/* ------------------------------------------------------------------ */
+
+list.boxed-list,
+list.boxed-list > row,
+list.nested,
+list.nested > row,
+listview,
+listview > row,
+row,
+.card {
+  background-color: @ih-surface-card;
+  color: @ih-ink;
+}
+
+row:hover,
+list.boxed-list > row:hover {
+  background-color: @ih-hover;
+}
+
+row:selected,
+list.boxed-list > row:selected,
+list.nested > row:selected {
+  background-color: @ih-selected;
+}
+
+/* Baris navigasi memakai latar panel; sorotan cukup berupa tint sage. */
+list.navigation-sidebar,
+list.navigation-sidebar > row {
+  background-color: transparent;
+  color: @ih-ink;
+}
+
+list.navigation-sidebar > row:hover {
+  background-color: @ih-hover;
+}
+
+list.navigation-sidebar > row:selected {
+  background-color: @ih-selected;
+  color: @ih-sage;
+}
+
+/* ------------------------------------------------------------------ */
+/* Kontrol                                                             */
+/* ------------------------------------------------------------------ */
+
+button {
+  background-color: @ih-surface-card;
+  color: @ih-ink;
+  box-shadow: none;
+}
+
+button:hover {
+  background-color: @ih-hover;
+}
+
+button:active,
+button:checked {
+  background-color: @ih-selected;
+  color: @ih-sage;
+}
+
+button.flat,
+button.image-button.flat {
+  background-color: transparent;
+}
+
+button.flat:hover {
+  background-color: alpha(@ih-sage, 0.10);
+}
+
+entry,
+spinbutton,
+textview,
+textview > text,
+dropdown > button {
+  background-color: @ih-surface-card;
+  color: @ih-ink;
+  box-shadow: inset 0 0 0 1px @ih-line;
+}
+
+entry:focus-within,
+spinbutton:focus-within,
+dropdown > button:focus {
+  box-shadow: inset 0 0 0 2px @ih-accent;
+}
+
+checkbutton > check {
+  background-color: @ih-surface-card;
+  border-color: @ih-line;
+  color: transparent;
+}
+
+checkbutton:checked > check {
+  background-color: @ih-sage;
+  border-color: @ih-sage;
+  color: @ih-surface-card;
+}
+
+popover.background,
+popover > contents,
+popover.menu > contents,
+tooltip,
+tooltip > box,
+dropdown popover > contents {
+  background-color: @ih-surface-card;
+  color: @ih-ink;
+}
+
+scrollbar slider {
+  background-color: alpha(@ih-ink, 0.28);
+  border-radius: 8px;
+}
+
+scrollbar slider:hover {
+  background-color: alpha(@ih-ink, 0.42);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status dan kartu                                                    */
+/* ------------------------------------------------------------------ */
 
 .state-kosong {
   /* Jangan memakai transparansi: itu menurunkan kontras efektif di bawah 4.5:1. */
@@ -36,23 +223,36 @@
  * mudah dipindai tanpa menambah garis tebal yang mengganggu. */
 .ih-card {
   background-color: @ih-surface-card;
+  border: 1px solid @ih-line;
   border-radius: 14px;
   padding: 14px;
+  box-shadow: 0 1px 2px alpha(@ih-night, 0.05);
 }
 
 .ih-section-title {
   color: @ih-sage;
   font-weight: 700;
   margin-top: 4px;
+  margin-bottom: 2px;
 }
 
 .ih-hint {
   color: @ih-muted;
 }
 
+/* Tombol tambah cepat memakai nada sage lembut agar tidak bersaing dengan
+ * tombol aksi utama. Tombol "suggested-action" tetap memakai aksen penuh. */
 .ih-quick {
   font-weight: 600;
   min-height: 34px;
+  background-color: alpha(@ih-sage, 0.10);
+  border: 1px solid alpha(@ih-sage, 0.24);
+  color: @ih-sage;
+  box-shadow: none;
+}
+
+.ih-quick:hover {
+  background-color: alpha(@ih-sage, 0.16);
 }
 
 .ih-progress {
@@ -60,29 +260,53 @@
   border-radius: 4px;
 }
 
+progressbar > trough {
+  background-color: alpha(@ih-sage, 0.14);
+  border-radius: 4px;
+}
+
+progressbar > trough > progress {
+  background-color: @ih-sage;
+  border-radius: 4px;
+}
+
+/* Kartu pembungkus sudah memberi latar; area gambar cukup menyediakan ruang. */
 .ih-tren {
-  background-color: @ih-surface-card;
-  border-radius: 12px;
-  min-height: 180px;
-  padding: 6px;
+  min-height: 220px;
+  /* Kurva memakai aksen sage; warna teks tetap diwarisi dari kartu. */
+  color: @ih-accent;
 }
 
 .ih-calendar-grid {
   background-color: @ih-surface-card;
+  border: 1px solid @ih-line;
   border-radius: 14px;
   padding: 10px;
 }
 
-.ih-calendar-day {
+/* Hari kalender adalah tombol datar; latar hanya muncul saat hover atau dipilih. */
+button.ih-calendar-day {
   min-width: 44px;
   min-height: 52px;
   border-radius: 10px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: @ih-ink;
 }
 
-.ih-calendar-day.ih-selected {
+button.ih-calendar-day:hover {
+  background-color: alpha(@ih-sage, 0.10);
+}
+
+button.ih-calendar-day.ih-selected {
   background-color: @ih-sage;
   color: @ih-surface-card;
   font-weight: 700;
+}
+
+button.ih-calendar-day.ih-selected:hover {
+  background-color: @ih-sage;
 }
 
 .ih-accent {

@@ -9,6 +9,8 @@
 @define-color ih-accent #9cc4aa;
 @define-color ih-surface #17241c;
 @define-color ih-surface-card #1e2f25;
+@define-color ih-hover #24362b;
+@define-color ih-selected #2b4033;
 @define-color ih-line #33473a;
 @define-color ih-ink #e6f0e8;
 @define-color ih-muted #b4c3b8;
@@ -16,3 +18,25 @@
 @define-color ih-done #87b99a;
 @define-color ih-pending #a6b3a9;
 @define-color ih-gold #d9b866;
+
+/* Aksen gelap memakai sage terang dengan teks gelap agar kontras tetap tinggi. */
+@define-color accent_color @ih-accent;
+@define-color accent_bg_color @ih-accent;
+@define-color accent_fg_color @ih-night;
+@define-color window_bg_color @ih-surface;
+@define-color window_fg_color @ih-ink;
+@define-color view_bg_color @ih-surface-card;
+@define-color view_fg_color @ih-ink;
+@define-color headerbar_bg_color @ih-surface;
+@define-color headerbar_fg_color @ih-ink;
+@define-color headerbar_border_color @ih-line;
+@define-color card_bg_color @ih-surface-card;
+@define-color card_fg_color @ih-ink;
+@define-color popover_bg_color @ih-surface-card;
+@define-color popover_fg_color @ih-ink;
+@define-color sidebar_bg_color @ih-surface-card;
+@define-color sidebar_fg_color @ih-ink;
+@define-color sidebar_backdrop_color @ih-surface-card;
+@define-color sidebar_shade_color @ih-line;
+@define-color dialog_bg_color @ih-surface-card;
+@define-color dialog_fg_color @ih-ink;

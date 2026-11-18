@@ -451,31 +451,32 @@ Daftar untuk memperkirakan besar pekerjaan:
 
 | Peran | Tema terang | Hex | Kontras ke latar |
 |---|---|---|---|
-| Utama | Hijau sage gelap | `#284A3A` | 9.22:1 |
-| Aksen | Hijau sage sedang | `#466951` | 5.78:1 |
-| Latar | Hampir putih kehijauan | `#F6F8F4` | — |
+| Utama | Hijau sage gelap | `#284A3A` | 8.69:1 |
+| Aksen | Hijau sage sedang | `#466951` | 5.45:1 |
+| Latar | Hijau sage sangat muda | `#EDF2EC` | — |
 | Kartu | Putih bersih | `#FFFFFF` | — |
-| Teks | Hijau sangat gelap | `#1C2B24` | 13.84:1 |
-| Selesai | Hijau daun | `#356044` | 6.76:1 |
-| Belum | Abu kehijauan | `#5D6A61` | 5.31:1 |
-| Titik tren | Emas lembut | `#8A6A26` | 4.71:1 |
+| Teks | Hijau sangat gelap | `#1C2B24` | 13.03:1 |
+| Selesai | Hijau daun | `#356044` | 6.37:1 |
+| Belum | Abu kehijauan | `#5D6A61` | 5.00:1 |
+| Titik tren | Emas lembut | `#866626` | 4.70:1 |
 
 | Peran | Tema gelap | Hex | Kontras ke latar |
 |---|---|---|---|
-| Utama | Sage pucat | `#A8C5B2` | 9.49:1 |
-| Aksen | Sage sedang terang | `#9CC4AA` | 9.15:1 |
-| Latar | Hijau malam | `#101B15` | — |
+| Utama | Sage pucat | `#A8C5B2` | 8.65:1 |
+| Aksen | Sage sedang terang | `#9CC4AA` | 8.34:1 |
+| Latar | Hijau malam | `#17241C` | — |
 | Kartu | Hijau malam lebih terang | `#1E2F25` | — |
-| Teks | Sage sangat pucat | `#E6F0E8` | 15.13:1 |
-| Selesai | Hijau daun terang | `#87B99A` | 7.93:1 |
-| Belum | Abu hangat | `#A6B3A9` | 8.11:1 |
-| Titik tren | Emas pucat | `#D9B866` | 9.25:1 |
+| Teks | Sage sangat pucat | `#E6F0E8` | 13.78:1 |
+| Selesai | Hijau daun terang | `#87B99A` | 7.23:1 |
+| Belum | Abu hangat | `#A6B3A9` | 7.39:1 |
+| Titik tren | Emas pucat | `#D9B866` | 8.42:1 |
 
 - Hindari merah untuk status belum karena memberi kesan bersalah. Status belum memakai abu kehijauan yang tetap memenuhi kontras 4.5:1 di kedua tema, tanpa transparansi.
-- **Warna terang dipakai pada tema terang; tema gelap memakai varian yang lebih pucat** agar kontras tidak turun. Rasio di atas dihitung dengan rumus kontras WCAG terhadap latar masing-masing (`#F6F8F4` dan `#101B15`).
-- Kartu, garis pemisah, teks pendukung, dan tombol cepat memakai variabel tambahan `ih-surface-card`, `ih-line`, `ih-muted`, dan `ih-gold` supaya tata letak konsisten di semua halaman.
+- **Warna terang dipakai pada tema terang; tema gelap memakai varian yang lebih pucat** agar kontras tidak turun. Rasio di atas dihitung dengan rumus kontras WCAG terhadap latar masing-masing (`#EDF2EC` dan `#17241C`).
+- Kartu, garis pemisah, teks pendukung, dan tombol cepat memakai variabel tambahan `ih-surface-card`, `ih-line`, `ih-muted`, dan `ih-gold` supaya tata letak konsisten di semua halaman. `ih-hover` dan `ih-selected` menyediakan umpan balik saat baris atau tombol disentuh.
 - Sediakan mode terang dan gelap, dan hormati pengaturan sistem.
 - Aturan dan warna terang ada di `data/style.css`; `data/style-dark.css` hanya mengganti definisi warna saat tema gelap aktif. `src/ui/theme.py` menambahkan/mencopot provider gelap mengikuti `Adw.StyleManager`.
+- **Palet aplikasi didahulukan di atas tema GTK pengguna.** Banyak tema pihak ketiga (mis. Graphite) menulis warna literal pada `.background` di `~/.config/gtk-4.0/gtk.css`, yang dimuat GTK pada prioritas `USER`. Karena itu provider aplikasi dipasang satu tingkat di atasnya dan permukaan utama ditulis eksplisit. Tanpa langkah ini, memilih tema **Terang** tetap menghasilkan jendela gelap bila tema sistem gelap. Pilihan terang/gelap tetap mengikuti `Adw.StyleManager`, jadi mode sistem dan aksesibilitas teks tidak hilang.
 - Penanda tetap memakai simbol dan teks (`○`, `◐`, `●`), bukan warna saja, lewat kelas `.state-kosong`, `.state-sebagian`, dan `.state-penuh`.
 
 > **Catatan:** kontras dihitung secara statis. Penilaian visual pada layar nyata, termasuk tema sistem yang berubah saat aplikasi terbuka, masih perlu diverifikasi di sesi GNOME 51.

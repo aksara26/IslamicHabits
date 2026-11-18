@@ -132,7 +132,9 @@ class MainWindow(Adw.ApplicationWindow):
         add_button = Gtk.MenuButton(
             icon_name="list-add-symbolic",
             menu_model=add_menu,
-            tooltip_text="Tambah ibadah atau kebiasaan (Ctrl+N)",
+            tooltip_text=(
+                "Tambah ibadah (Ctrl+N) atau kebiasaan (Ctrl+Shift+N)"
+            ),
         )
         set_accessible_label(add_button, "Tambah ibadah atau kebiasaan")
         content_header.pack_end(add_button)

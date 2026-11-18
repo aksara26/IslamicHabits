@@ -35,6 +35,13 @@ _COLOR_SCHEMES = {
     "gelap": Adw.ColorScheme.FORCE_DARK,
 }
 
+# Tema GTK milik pengguna (mis. Graphite) dimuat GTK pada prioritas USER dan
+# sering menulis warna literal seperti ``.background { background-color: ... }``.
+# Tanpa berada di atasnya, palet sage aplikasi kalah dan jendela bisa tetap
+# gelap meski skema "Terang" dipilih. Palet aplikasi sengaja didahulukan agar
+# warna dan kontras konsisten; pilihan terang/gelap tetap mengikuti StyleManager.
+_PROVIDER_PRIORITY = Gtk.STYLE_PROVIDER_PRIORITY_USER + 1
+
 _current_theme = THEME_KEYS[0]
 _display: Gdk.Display | None = None
 _base_provider: Gtk.CssProvider | None = None
@@ -115,7 +122,7 @@ def _update_dark_provider() -> None:
     Gtk.StyleContext.add_provider_for_display(
         _display,
         provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+        _PROVIDER_PRIORITY + 1,
     )
     _dark_provider = provider
 
@@ -139,7 +146,7 @@ def load_stylesheet() -> None:
     except Exception:
         return
     Gtk.StyleContext.add_provider_for_display(
-        display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        display, provider, _PROVIDER_PRIORITY
     )
     _display = display
     _base_provider = provider

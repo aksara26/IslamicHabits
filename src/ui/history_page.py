@@ -160,15 +160,25 @@ class HistoryPage(Gtk.Box):
         self._views = Gtk.Stack()
         self._views.set_hexpand(True)
         self._views.set_vexpand(True)
-        self._views.add_named(self._build_day_view(), "day")
-        self._views.add_named(self._build_month_view(), "month")
-        self._views.add_named(self._build_year_view(), "year")
+        self._views.add_named(self._scrollable(self._build_day_view()), "day")
+        self._views.add_named(self._scrollable(self._build_month_view()), "month")
+        self._views.add_named(self._scrollable(self._build_year_view()), "year")
         self._views.set_visible_child_name("day")
+        self.append(self._views)
+
+    @staticmethod
+    def _scrollable(child: Gtk.Widget) -> Gtk.ScrolledWindow:
+        """Beri gulir per halaman supaya tinggi tiap mode berdiri sendiri.
+
+        Sebelumnya satu ScrolledWindow membungkus seluruh Gtk.Stack. Karena
+        Stack memakai ukuran anak tertinggi, mode tahunan tetap bisa digulir
+        ke ruang kosong sepanjang daftar pada mode harian.
+        """
 
         scrolled = Gtk.ScrolledWindow(vexpand=True)
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_child(self._views)
-        self.append(scrolled)
+        scrolled.set_child(child)
+        return scrolled
 
     def _trend_card(
         self, title: str, hint: str, trend: TrendLine
@@ -177,6 +187,7 @@ class HistoryPage(Gtk.Box):
 
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         card.add_css_class("ih-card")
+        card.set_vexpand(True)
 
         heading = Gtk.Label(label=title)
         heading.set_xalign(0)
@@ -184,6 +195,7 @@ class HistoryPage(Gtk.Box):
         card.append(heading)
 
         trend.add_css_class("ih-tren")
+        trend.set_vexpand(True)
         card.append(trend)
 
         note = Gtk.Label(label=hint)

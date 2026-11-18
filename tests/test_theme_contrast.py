@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COLOR_RE = re.compile(r"@define-color\s+ih-([a-z]+)\s+(#[0-9a-fA-F]{6});")
+COLOR_RE = re.compile(r"@define-color\s+ih-([a-z-]+)\s+(#[0-9a-fA-F]{6});")
 MIN_RATIO = 4.5
 TEXT_ROLES = ("sage", "accent", "ink", "done", "pending")
 
@@ -62,6 +62,32 @@ class ThemeContrastTests(unittest.TestCase):
         self.assertIsNotNone(block)
         self.assertIn("color: @ih-pending;", block.group(1))  # type: ignore[union-attr]
         self.assertNotIn("opacity", block.group(1))  # type: ignore[union-attr]
+
+    def test_gold_marker_has_enough_contrast(self) -> None:
+        """Titik tren emas harus terlihat di atas kartu, bukan hanya di latar."""
+
+        for palette in (self.light, self.dark):
+            with self.subTest(theme=palette["surface"]):
+                self.assertGreaterEqual(
+                    _contrast(palette["gold"], palette["surface-card"]), MIN_RATIO
+                )
+
+    def test_window_surface_is_declared_explicitly(self) -> None:
+        """Palet aplikasi harus menang atas tema GTK pengguna.
+
+        Tema pihak ketiga (mis. Graphite) memuat ``.background`` dengan warna
+        literal pada prioritas USER. Tanpa aturan eksplisit di berkas ini,
+        jendela tetap gelap meski pengguna memilih tema terang.
+        """
+
+        text = (ROOT / "data" / "style.css").read_text(encoding="utf-8")
+        self.assertRegex(text, r"window\.background[^{]*\{[^}]*background-color:")
+
+    def test_provider_priority_is_above_user_theme(self) -> None:
+        source = (ROOT / "src" / "ui" / "theme.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "_PROVIDER_PRIORITY = Gtk.STYLE_PROVIDER_PRIORITY_USER + 1", source
+        )
 
 
 if __name__ == "__main__":

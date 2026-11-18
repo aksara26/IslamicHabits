@@ -177,6 +177,11 @@ class TodayPage(Gtk.Box):
         summary_box.set_margin_end(18)
         summary_box.set_margin_top(6)
         summary_box.set_margin_bottom(6)
+
+        summary_title = Gtk.Label(label="Ringkasan hari ini")
+        summary_title.set_xalign(0)
+        summary_title.add_css_class("ih-section-title")
+        summary_box.append(summary_title)
         summary_box.append(self._summary_label)
         summary_box.append(self._progress)
 
@@ -283,7 +288,7 @@ class TodayPage(Gtk.Box):
         title.add_css_class("ih-section-title")
         hint = Gtk.Label(label="Tulis hal singkat tentang hari ini; tersimpan otomatis.")
         hint.set_xalign(0)
-        hint.add_css_class("dim-label")
+        hint.add_css_class("ih-hint")
         hint.set_wrap(True)
 
         self._note_view = Gtk.TextView()
@@ -438,6 +443,7 @@ class TodayPage(Gtk.Box):
             add_worship.add_css_class("suggested-action")
             add_worship.connect("clicked", lambda *_: self._on_add_worship())
             add_habit = Gtk.Button(label="Tambah kebiasaan")
+            add_habit.add_css_class("ih-quick")
             add_habit.connect("clicked", lambda *_: self._on_add_habit())
             actions.append(add_worship)
             actions.append(add_habit)

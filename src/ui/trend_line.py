@@ -10,6 +10,7 @@ untuk kompatibilitas tahunan.
 
 from __future__ import annotations
 
+import warnings
 from typing import Sequence
 
 import gi
@@ -118,6 +119,22 @@ class TrendLine(Gtk.DrawingArea):
 
     # -- Geometri --------------------------------------------------------
 
+    def _dot_color(self) -> tuple[float, float, float]:
+        """Warna titik dari palet CSS supaya kontras mengikuti tema aktif.
+
+        Emas statis terlalu pucat di atas kartu putih, sedangkan tema gelap
+        butuh emas yang lebih terang. Nilai ``ih-gold`` sudah diuji kontrasnya
+        di ``tests/test_theme_contrast.py``.
+        """
+
+        context = self.get_style_context()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            found, rgba = context.lookup_color("ih-gold")
+        if found:
+            return (rgba.red, rgba.green, rgba.blue)
+        return ACCENT_GOLD
+
     def _geometry(self) -> tuple[float, float, float, float]:
         width = max(float(self.get_width()), 1.0)
         height = max(float(self.get_height()), 1.0)
@@ -199,6 +216,7 @@ class TrendLine(Gtk.DrawingArea):
         _, padding, _, plot_height = self._geometry()
         baseline = padding + plot_height
         color = self.get_color()
+        gold = self._dot_color()
 
         # Garis bantu halus memberi skala tanpa mendominasi.
         cr.set_source_rgba(color.red, color.green, color.blue, 0.14)
@@ -234,7 +252,7 @@ class TrendLine(Gtk.DrawingArea):
             if not point.has_data:
                 continue
             x, y = self._position(index)
-            cr.set_source_rgba(*ACCENT_GOLD, 1.0)
+            cr.set_source_rgba(*gold, 1.0)
             cr.arc(x, y, 3.5, 0, 2 * 3.141592653589793)
             cr.fill()
 
