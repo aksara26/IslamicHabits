@@ -4,6 +4,8 @@ Aplikasi desktop Linux untuk mencatat ibadah harian secara pribadi. Dibuat untuk
 
 > **Status:** versi 0.1.0 siap untuk uji pakai. Seluruh fitur v1 sudah tersedia: lapisan data SQLite, Hari Ini, Kelola Ibadah, Riwayat, Muhasabah, statistik, Pengaturan, pengenalan, aksesibilitas dasar, ekspor/impor/cadangan, serta berkas pengemasan Flatpak dan AppImage. Uji visual di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
 
+> **Panduan instalasi:** [`INSTALL.md`](INSTALL.md). Berkas ini fokus pada fitur, arsitektur, dan perilaku aplikasi.
+
 ---
 
 ## Daftar Isi
@@ -75,7 +77,7 @@ Aplikasi ini membantu pengguna mencatat dan merefleksikan ibadah hariannya (shol
 | Antarmuka | GTK4 + libadwaita lewat PyGObject | Native untuk GNOME |
 | Build | Meson | Standar aplikasi GNOME |
 | Database | SQLite | Satu berkas, tanpa server |
-| Pengemasan | Flatpak (utama), AppImage (opsional) | Lihat bagian 16 |
+| Pengemasan | Flatpak (utama), AppImage (opsional) | Lihat `INSTALL.md` dan bagian 16 |
 | Lisensi | GPL-3.0-or-later | Lihat berkas `LICENSE` |
 | ID aplikasi | `io.github.kurakura.IslamicHabits` | Dipakai untuk desktop entry, Flatpak, GSettings, dan path data |
 
@@ -140,14 +142,15 @@ Tiga lapisan dengan pemisahan tegas:
 
 ```
 IslamicHabits/
-├── README.md
+├── README.md               # fitur, arsitektur, dan perilaku
+├── INSTALL.md              # panduan instalasi dan lokasi data
 ├── LICENSE                 # GPL-3.0-or-later
 ├── .gitignore              # data pengguna & build tidak masuk git
 ├── meson.build             # build + install
 ├── data/
 │   ├── io.github.kurakura.IslamicHabits.desktop
 │   ├── io.github.kurakura.IslamicHabits.metainfo.xml
-│   ├── style.css           # palet ringan + penanda status
+│   ├── style.css           # palet biru gelap + penanda status
 │   └── icons/hicolor/scalable/apps/io.github.kurakura.IslamicHabits.svg
 ├── src/
 │   ├── __init__.py
@@ -398,22 +401,22 @@ Daftar untuk memperkirakan besar pekerjaan:
 
 ## 10. Desain Visual
 
-**Warna (usulan, sesuaikan selera):**
+**Warna (biru gelap, tenang, dan netral):**
 
 | Peran | Warna | Hex |
 |---|---|---|
-| Utama | Hijau tua | `#1F5C4A` |
-| Aksen | Emas lembut | `#C9A24B` |
-| Latar terang | Krem | `#FAF6EC` |
-| Teks terang | Hijau kehitaman | `#14231E` |
-| Latar gelap | Hijau sangat gelap | `#0E1A16` |
-| Selesai | Hijau cerah | `#3E9B6E` |
-| Belum | Abu hangat | `#B9B3A4` |
+| Utama | Biru gelap | `#1B3A5C` |
+| Aksen | Biru sedang | `#5B8BB8` |
+| Latar terang | Hampir putih kebiruan | `#F5F8FC` |
+| Teks terang | Biru sangat gelap | `#12233A` |
+| Latar gelap | Biru malam | `#0B1626` |
+| Selesai | Biru terang | `#3D7EB5` |
+| Belum | Abu kebiruan | `#8794A5` |
 
 - Hindari merah untuk status belum karena memberi kesan bersalah.
-- **Emas di atas krem berkontras rendah.** Pakai emas untuk ornamen dan ikon, bukan teks kecil.
+- **Biru gelap dipakai untuk elemen pada latar terang; pada latar gelap pakai biru sedang atau biru terang.** Aksen biru sedang cocok untuk ornamen dan ikon, bukan teks kecil di atas latar terang.
 - Sediakan mode terang dan gelap, dan hormati pengaturan sistem.
-- Palet di atas diterapkan lewat `data/style.css` (`paletRingan`) dengan kelas `.state-kosong`, `.state-sebagian`, dan `.state-penuh`. Penanda tetap memakai simbol dan teks, bukan warna saja.
+- Palet di atas diterapkan lewat `data/style.css` dengan kelas `.state-kosong`, `.state-sebagian`, dan `.state-penuh`. Penanda tetap memakai simbol dan teks, bukan warna saja.
 
 **Tipografi:**
 
@@ -488,7 +491,7 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 - Garis tren tahunan punya alternatif teks 12 bulan dan navigasi keyboard
 - Status tidak bergantung warna saja: `○` kosong, `◐` sebagian, `●` penuh, disertai teks
 - Ukuran huruf mengikuti pengaturan sistem
-- Area klik cukup besar dan tidak terlalu rapat; verifikasi kontras emas di atas krem tetap perlu pada sesi nyata
+- Area klik cukup besar dan tidak terlalu rapat; verifikasi kontras biru sedang di atas latar terang tetap perlu pada sesi nyata
 
 ---
 
@@ -507,158 +510,17 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 ---
 
-## 16. Pengemasan, Instalasi, dan Distribusi
+## 16. Pengemasan dan Distribusi
 
 | Format | Kegunaan |
 |---|---|
-| **Sumber (Meson)** | Pengembangan dan instalasi lokal |
 | **Flatpak** | Jalur utama yang disarankan untuk aplikasi GNOME; dapat dibagikan sebagai bundle di GitHub Releases |
+| **Sumber (Meson)** | Pengembangan dan instalasi lokal |
 | **AppImage** | Opsional, satu berkas yang langsung dijalankan |
 
 Lisensi sudah ditetapkan: **GPL-3.0-or-later** (berkas `LICENSE`). `.gitignore` menyembunyikan data pengguna dan berkas build. Menerbitkan ke Flathub adalah langkah terpisah dan tidak wajib karena distribusi lewat GitHub Releases.
 
-### 16.1 Tutorial instalasi dari sumber (Meson)
-
-Cocok untuk mengubah kode sendiri. Dependensi di Fedora:
-
-```bash
-sudo dnf install meson ninja-build python3 python3-gobject python3-cairo gtk4 libadwaita \
-  gtk4-devel libadwaita-devel glib2-devel desktop-file-utils appstream
-```
-
-Dari folder proyek:
-
-```bash
-git clone https://github.com/kurakura/IslamicHabits.git
-cd IslamicHabits
-meson setup builddir
-meson test -C builddir
-sudo meson install -C builddir
-```
-
-Jalankan dari menu aplikasi atau lewat terminal:
-
-```bash
-islamichabits
-```
-
-Tanpa instalasi, langsung dari sumber juga bisa:
-
-```bash
-python3 -m src.main
-```
-
-**Memperbarui:** tarik kode terbaru, lalu ulangi `meson install -C builddir`.
-
-**Mencopot:**
-
-```bash
-sudo ninja -C builddir uninstall
-```
-
-Perintah uninstall tidak menghapus data pengguna. Hapus manual folder data bila memang ingin memulai dari kosong (lihat 16.5).
-
-### 16.2 Tutorial Flatpak
-
-Manifest ada di `packaging/io.github.kurakura.IslamicHabits.json` dan memakai runtime GNOME 51 sesuai target proyek.
-
-Pasang alat dan runtime bila belum ada:
-
-```bash
-sudo dnf install flatpak flatpak-builder
-flatpak remote-add --if-not-exists flathub \
-  https://flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub org.gnome.Sdk//51 org.gnome.Platform//51
-```
-
-Bangun dan pasang untuk pengguna saat ini:
-
-```bash
-cd IslamicHabits
-flatpak-builder --user --install --force-clean builddir-flatpak \
-  packaging/io.github.kurakura.IslamicHabits.json
-flatpak run io.github.kurakura.IslamicHabits
-```
-
-Bila ingin berkas bundle untuk dibagikan:
-
-```bash
-flatpak-builder --repo=repo-flatpak --force-clean builddir-flatpak \
-  packaging/io.github.kurakura.IslamicHabits.json
-flatpak build-bundle repo-flatpak IslamicHabits.flatpak \
-  io.github.kurakura.IslamicHabits
-```
-
-Pasang bundle yang diterima:
-
-```bash
-flatpak install --user IslamicHabits.flatpak
-flatpak run io.github.kurakura.IslamicHabits
-```
-
-**Memperbarui:** bangun lagi dengan `--force-clean`, lalu `flatpak install --user` berkas bundle baru.
-
-**Mencopot:**
-
-```bash
-flatpak uninstall --delete-data io.github.kurakura.IslamicHabits
-```
-
-`@delete-data` hanya dipakai bila Anda memang ingin menghapus data aplikasi di `~/.var/app/io.github.kurakura.IslamicHabits/`.
-
-### 16.3 Tutorial AppImage (opsional)
-
-Unduh `IslamicHabits-x86_64.AppImage` dari halaman Releases, atau bangun sendiri:
-
-```bash
-cd IslamicHabits
-bash packaging/build-appimage.sh
-```
-
-Skrip membutuhkan `meson`, `ninja`, dan `appimagetool`. Bila `appimagetool` belum ada di PATH:
-
-```bash
-APPIMAGETOOL=/path/ke/appimagetool bash packaging/build-appimage.sh
-```
-
-Jalankan:
-
-```bash
-chmod +x IslamicHabits-x86_64.AppImage
-./IslamicHabits-x86_64.AppImage
-```
-
-AppImage memakai Python, GTK4, dan libadwaita dari sistem host. Jadi paket ini praktis sebagai satu berkas, tetapi **Flatpak lebih mandiri**. Simpan ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
-
-**Mencopot:** hapus berkas `.AppImage`. Bila dulu mengintegrasikan dengan `appimaged` atau launcher manual, hapus entri desktopnya juga. Data tetap ada di `~/.local/share/io.github.kurakura.IslamicHabits/`.
-
-### 16.4 Pertama kali menjalankan
-
-1. Dialog pengenalan muncul sekali. Baca prinsipnya, lalu pilih **Mulai mencatat**.
-2. Ibadah bawaan (sholat fardhu, sunnah, tilawah, dzikir, dan lain-lain) sudah tersedia di **Hari Ini**.
-3. Sesuaikan daftar di **Kelola Ibadah**: tambah, ubah, urutkan, atau arsipkan. Arsip tidak menghapus riwayat.
-4. Isi **Pengaturan** bila ingin tema tertentu, pengingat harian, atau folder cadangan.
-5. Gunakan `Ctrl+1` / `Ctrl+2` / `Ctrl+3` untuk membuka Riwayat harian, bulanan, dan tahunan.
-
-Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
-
-### 16.5 Lokasi data dan pencopotan
-
-| Instalasi | Basis data | Cadangan bawaan |
-|---|---|---|
-| Sumber / AppImage | `$XDG_DATA_HOME/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` atau `~/.local/share/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../io.github.kurakura.IslamicHabits/backups/` |
-| Flatpak | `~/.var/app/io.github.kurakura.IslamicHabits/data/io.github.kurakura.IslamicHabits/islamichabits.sqlite3` | `.../data/io.github.kurakura.IslamicHabits/backups/` |
-
-Halaman **Pengaturan → Data → Lokasi data** menampilkan jalur ini dan tombol **Buka folder**. Folder cadangan bisa diubah ke lokasi lain.
-
-Mencopot aplikasi tidak otomatis menghapus data. Ini disengaja agar data tetap aman saat aplikasi diperbarui atau dipasang ulang. Untuk menghapus semua data dari dalam aplikasi, gunakan **Pengaturan → Data → Hapus semua data**; ibadah bawaan akan dikembalikan. Untuk menghapus folder data sepenuhnya, hapus manual jalur pada tabel di atas setelah membuat cadangan.
-
-### 16.6 Rilis di GitHub
-
-- Kode di repositori, paket di halaman Releases.
-- Workflow `.github/workflows/build.yml` menjalankan tes, membangun AppImage, dan melampirkannya ke rilis saat tag `v*` di-push.
-- Detail langkah rilis dan Flatpak bundle ada di `packaging/RELEASE.md`.
-- Penomoran versi dan catatan rilis dibuat pada tiap rilis.
+Cara memasang, menjalankan, memperbarui, dan mencopot aplikasi, serta lokasi data dan langkah pertama setelah instalasi, ada di [`INSTALL.md`](INSTALL.md). Panduan bagi pembuat paket rilis ada di [`packaging/RELEASE.md`](packaging/RELEASE.md).
 
 ---
 
@@ -700,7 +562,7 @@ Mencopot aplikasi tidak otomatis menghapus data. Ini disengaja agar data tetap a
 2. **Lingkungan pengembangan.** Pengembangan GTK4 lewat Python bergantung pada banyak paket sistem, lebih rumit daripada proyek web. Siapkan dan uji lebih dulu.
 3. **Kehilangan data.** Tanpa server tidak ada cadangan ke luar komputer. Cadangan mingguan dan ekspor manual sudah tersedia, tetapi pengguna tetap perlu memilih folder cadangan atau menyimpan salinan di tempat lain.
 4. **Ruang lingkup.** Rencana ini cukup besar untuk satu pengembang. Disiplin pada urutan pengerjaan dan selesaikan inti sebelum menambah fitur.
-5. **Kontras warna.** Kombinasi emas dan krem rawan sulit dibaca. Uji sebelum dipakai untuk teks.
+5. **Kontras warna.** Biru sedang di atas latar terang dan biru gelap di atas latar gelap bisa kehilangan kontras. Uji pada mode terang dan gelap sebelum dipakai untuk teks kecil.
 6. **Akurasi isi keagamaan.** Teks bawaan seperti daftar ibadah, pertanyaan muhasabah, atau dzikir sebaiknya diverifikasi pada sumber yang dipercaya sebelum dipublikasikan.
 
 ---

@@ -1,6 +1,7 @@
 # Catatan pengemasan rilis
 
-Semua perintah dijalankan dari folder proyek.
+Semua perintah dijalankan dari folder proyek. Untuk cara memasang paket oleh
+pengguna, lihat [`INSTALL.md`](../INSTALL.md).
 
 ## 1. Pastikan versi sudah tepat
 
@@ -53,6 +54,7 @@ lebih mandiri dan tetap disarankan untuk pengguna GNOME.
 2. Workflow `.github/workflows/build.yml` menjalankan tes, membangun AppImage,
    lalu melampirkannya ke rilis tag.
 3. Unggah pula `IslamicHabits.flatpak` bila sudah dibangun.
-4. Tulis catatan rilis singkat: fitur, perbaikan, dan cara instalasi.
+4. Tulis catatan rilis singkat: fitur, perbaikan, dan tautan ke
+   [`INSTALL.md`](../INSTALL.md) untuk cara instalasi.
 
 Menerbitkan ke Flathub adalah langkah terpisah dan tidak wajib.
