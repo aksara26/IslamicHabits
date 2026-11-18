@@ -1,0 +1,42 @@
+{
+  "app-id": "io.github.kurakura.IslamicHabits",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
+  "command": "islamichabits",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--filesystem=xdg-documents"
+  ],
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig",
+    "/share/pkgconfig",
+    "/share/man",
+    "*.la",
+    "*.a"
+  ],
+  "modules": [
+    {
+      "name": "islamichabits",
+      "buildsystem": "meson",
+      "config-opts": [
+        "--prefix=/app"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "..",
+          "skip": [
+            ".git",
+            "builddir",
+            "builddir-appimage",
+            "__pycache__"
+          ]
+        }
+      ]
+    }
+  ]
+}

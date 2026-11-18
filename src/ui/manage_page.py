@@ -13,20 +13,13 @@ from gi.repository import Adw, Gtk
 
 from ..logic.repository import Repository, WorshipRecord
 from ..logic.statistics import EntryKind
+from .a11y import set_accessible_label
 
 __all__ = ["ManagePage"]
 
 AddWorshipCallback = Callable[[int | None], None]
 ToastCallback = Callable[[str, str | None, Callable[[], None] | None], None]
-
-
-def _set_accessible_label(widget: Gtk.Widget, text: str) -> None:
-    try:
-        Gtk.Accessible.update_property(
-            widget, [Gtk.AccessibleProperty.LABEL], [text]
-        )
-    except Exception:
-        pass
+DataChangedCallback = Callable[[], None]
 
 
 class ManagePage(Gtk.Box):
@@ -38,11 +31,13 @@ class ManagePage(Gtk.Box):
         *,
         on_add_worship: AddWorshipCallback,
         on_toast: ToastCallback,
+        on_data_changed: DataChangedCallback,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_add_worship = on_add_worship
         self._on_toast = on_toast
+        self._on_data_changed = on_data_changed
         self._show_archived = False
 
         header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -161,7 +156,7 @@ class ManagePage(Gtk.Box):
     def _icon_button(icon: str, label: str, callback: Callable) -> Gtk.Button:
         button = Gtk.Button.new_from_icon_name(icon)
         button.set_tooltip_text(label)
-        _set_accessible_label(button, label)
+        set_accessible_label(button, label)
         button.get_style_context().add_class("flat")
         button.connect("clicked", callback)
         return button
@@ -196,19 +191,30 @@ class ManagePage(Gtk.Box):
         ids[index], ids[target] = ids[target], ids[index]
         self._repo.reorder_worships(ids)
         self.refresh()
+        self._on_data_changed()
 
     def _archive(self, worship: WorshipRecord) -> None:
         self._repo.archive_worship(worship.id)
         self.refresh()
+        self._on_data_changed()
         self._on_toast(
             f"{worship.name} diarsipkan",
             "Urungkan",
-            lambda: (self._repo.restore_worship(worship.id), self.refresh()),
+            self._undo_archive(worship.id),
         )
+
+    def _undo_archive(self, worship_id: int) -> Callable[[], None]:
+        def restore() -> None:
+            self._repo.restore_worship(worship_id)
+            self.refresh()
+            self._on_data_changed()
+
+        return restore
 
     def _restore(self, worship: WorshipRecord) -> None:
         self._repo.restore_worship(worship.id)
         self.refresh()
+        self._on_data_changed()
         self._on_toast(f"{worship.name} dipulihkan", None, None)
 
     def _confirm_delete(self, worship: WorshipRecord) -> None:
@@ -237,4 +243,5 @@ class ManagePage(Gtk.Box):
             return
         self._repo.delete_worship(worship.id)
         self.refresh()
+        self._on_data_changed()
         self._on_toast(f"{worship.name} dihapus permanen", None, None)

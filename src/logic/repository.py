@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-from .database import get_meta, set_meta
+from .database import get_meta, initialize, set_meta
 from .statistics import Entry as StatisticsEntry
 from .statistics import EntryKind, StatusValue
 from .statistics import Worship as StatisticsWorship
@@ -491,6 +491,19 @@ class Repository:
             answers=row["jawaban"],
         )
 
+    def list_muhasabah(self) -> tuple[MuhasabahRecord, ...]:
+        rows = self._db.execute(
+            "SELECT tanggal, teks, jawaban FROM muhasabah ORDER BY tanggal DESC"
+        ).fetchall()
+        return tuple(
+            MuhasabahRecord(
+                day=date.fromisoformat(row["tanggal"]),
+                text=row["teks"],
+                answers=row["jawaban"],
+            )
+            for row in rows
+        )
+
     def save_muhasabah(self, day: date | str, text: str, answers: str = "") -> None:
         self._db.execute(
             """
@@ -501,6 +514,18 @@ class Repository:
             (_to_iso(day), text, answers),
         )
         self._db.commit()
+
+    def clear_all_data(self) -> None:
+        """Hapus semua data pengguna, lalu kembalikan ibadah bawaan.
+
+        Dipakai setelah konfirmasi tegas dari halaman Pengaturan. Skema dan
+        data awal dibuat ulang supaya aplikasi tetap bisa dipakai.
+        """
+
+        for table in ("catatan", "muhasabah", "ibadah", "kategori", "pengaturan", "meta"):
+            self._db.execute(f"DELETE FROM {table}")
+        self._db.commit()
+        initialize(self._db, seed=True)
 
     # -- pembantu --------------------------------------------------------
 

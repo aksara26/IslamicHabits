@@ -11,3 +11,16 @@ EXPORT_VERSION = 1
 
 # Cadangan otomatis: mingguan, ke folder yang dipilih pengguna.
 BACKUP_INTERVAL_DAYS = 7
+
+# Kunci pengaturan dan meta. Disimpan sebagai teks di tabel masing-masing.
+SETTING_THEME = "tema"
+SETTING_REMINDER_ENABLED = "pengingat_aktif"
+SETTING_REMINDER_TIME = "pengingat_jam"
+SETTING_BACKUP_FOLDER = "folder_cadangan"
+SETTING_MUHASABAH_PROMPTS = "pertanyaan_muhasabah"
+SETTING_NICKNAME = "nama_panggilan"
+META_ONBOARDING_DONE = "pengenalan_selesai"
+META_LAST_BACKUP = "cadangan_terakhir"
+
+APP_VERSION = "0.1.0"
+REPOSITORY_URL = "https://github.com/kurakura/IslamicHabits"

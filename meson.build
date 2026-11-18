@@ -31,6 +31,7 @@ python3.install_sources(
   'src/logic/statistics.py',
   'src/logic/database.py',
   'src/logic/repository.py',
+  'src/logic/transfer.py',
   subdir: 'islamichabits/logic',
 )
 python3.install_sources(
@@ -40,6 +41,11 @@ python3.install_sources(
   'src/ui/worship_row.py',
   'src/ui/worship_dialog.py',
   'src/ui/manage_page.py',
+  'src/ui/history_page.py',
+  'src/ui/muhasabah_page.py',
+  'src/ui/settings_page.py',
+  'src/ui/a11y.py',
+  'src/ui/theme.py',
   'src/ui/trend_line.py',
   subdir: 'islamichabits/ui',
 )
@@ -61,6 +67,10 @@ install_data(
 install_data(
   'data/icons/hicolor/scalable/apps/' + app_id + '.svg',
   install_dir: join_paths(datadir, 'icons', 'hicolor', 'scalable', 'apps'),
+)
+install_data(
+  'data/style.css',
+  install_dir: join_paths(datadir, app_id),
 )
 
 test(

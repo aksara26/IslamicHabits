@@ -19,7 +19,12 @@
   <url type="homepage">https://github.com/kurakura/IslamicHabits</url>
   <releases>
     <release version="0.1.0" date="2026-11-18">
-      <description><p>Kerangka awal: identitas aplikasi dan statistik.</p></description>
+      <description>
+        <p>
+          Versi pertama: pencatatan harian, kelola ibadah, riwayat harian/bulanan/tahunan,
+          muhasabah, statistik, pengaturan tema dan pengingat, serta ekspor, impor, dan cadangan.
+        </p>
+      </description>
     </release>
   </releases>
   <content_rating type="oars-1.1"/>

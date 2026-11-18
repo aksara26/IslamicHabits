@@ -1,0 +1,53 @@
+name: Bangun dan uji
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pasang dependensi
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build python3-gi \
+            gir1.2-gtk-4.0 gir1.2-adw-1 libadwaita-1-0 desktop-file-utils
+
+      - name: Uji logika
+        run: python3 -m unittest discover -s tests -q
+
+      - name: Uji Meson
+        run: |
+          meson setup builddir
+          meson test -C builddir
+
+      - name: Unduh appimagetool
+        run: |
+          curl -L -o /tmp/appimagetool \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool
+
+      - name: Bangun AppImage
+        env:
+          APPIMAGETOOL: /tmp/appimagetool
+        run: bash packaging/build-appimage.sh
+
+      - name: Unggah artefak
+        uses: actions/upload-artifact@v4
+        with:
+          name: islamichabits-appimage
+          path: IslamicHabits-x86_64.AppImage
+
+      - name: Lampirkan ke rilis tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: IslamicHabits-x86_64.AppImage

@@ -23,6 +23,7 @@ from ..logic.statistics import (
     describe_daily_completion,
     is_active,
 )
+from .a11y import set_accessible_label
 
 __all__ = ["TodayPage"]
 
@@ -42,6 +43,7 @@ BULAN = (
     "Desember",
 )
 AddWorshipCallback = Callable[[], None]
+DataChangedCallback = Callable[[], None]
 
 
 def _format_day(day: date) -> str:
@@ -140,10 +142,17 @@ class _EntryDialog(Adw.Dialog):
 class TodayPage(Gtk.Box):
     """Daftar ibadah untuk satu tanggal, dengan ringkasan netral."""
 
-    def __init__(self, repository: Repository, *, on_add_worship: AddWorshipCallback) -> None:
+    def __init__(
+        self,
+        repository: Repository,
+        *,
+        on_add_worship: AddWorshipCallback,
+        on_data_changed: DataChangedCallback,
+    ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_add_worship = on_add_worship
+        self._on_data_changed = on_data_changed
         self.day = date.today()
         self._known_today = date.today()
 
@@ -182,6 +191,7 @@ class TodayPage(Gtk.Box):
 
         previous = Gtk.Button.new_from_icon_name("go-previous-symbolic")
         previous.set_tooltip_text("Hari sebelumnya (Ctrl+←)")
+        set_accessible_label(previous, "Hari sebelumnya")
         previous.connect("clicked", lambda *_: self.go_previous_day())
         box.append(previous)
 
@@ -192,11 +202,13 @@ class TodayPage(Gtk.Box):
 
         today = Gtk.Button(label="Hari ini")
         today.set_tooltip_text("Kembali ke hari ini (Ctrl+T)")
+        set_accessible_label(today, "Kembali ke hari ini")
         today.connect("clicked", lambda *_: self.go_today())
         box.append(today)
 
         following = Gtk.Button.new_from_icon_name("go-next-symbolic")
         following.set_tooltip_text("Hari berikutnya (Ctrl+→)")
+        set_accessible_label(following, "Hari berikutnya")
         following.connect("clicked", lambda *_: self.go_next_day())
         box.append(following)
 
@@ -219,6 +231,7 @@ class TodayPage(Gtk.Box):
         label.set_xalign(0)
         notice.append(label)
         switch = Gtk.Button(label="Beralih ke hari ini")
+        set_accessible_label(switch, "Beralih ke hari ini")
         switch.connect("clicked", self._on_switch_to_new_day)
         notice.append(switch)
         self._day_change_revealer = Gtk.Revealer()
@@ -236,7 +249,13 @@ class TodayPage(Gtk.Box):
         self.refresh()
 
     def go_today(self) -> None:
-        self.day = date.today()
+        self.set_day(date.today())
+
+    def set_day(self, day: date) -> None:
+        """Tampilkan tanggal tertentu, misalnya dari kalender Riwayat."""
+
+        self.day = day
+        self._day_change_revealer.set_reveal_child(False)
         self.refresh()
 
     def _check_day_change(self) -> bool:
@@ -290,7 +309,9 @@ class TodayPage(Gtk.Box):
             self._scrolled.set_child(empty)
             return
 
-        group = Adw.PreferencesGroup()
+        group = Gtk.ListBox()
+        group.set_selection_mode(Gtk.SelectionMode.NONE)
+        group.add_css_class("boxed-list")
         categories = {category.id: category for category in self._repo.list_categories()}
         grouped: dict[int | None, list[WorshipRecord]] = {}
         for worship in active:
@@ -316,7 +337,7 @@ class TodayPage(Gtk.Box):
             for worship in items:
                 row = self._create_row(worship, entry_map.get(worship.id))
                 expander.add_row(row)
-            group.add(expander)
+            group.append(expander)
 
         self._scrolled.set_child(group)
 
@@ -340,6 +361,7 @@ class TodayPage(Gtk.Box):
         else:
             self._repo.set_entry(worship_id, self.day, value=value)
         self.refresh()
+        self._on_data_changed()
 
     def _on_details(self, worship: WorshipRecord) -> None:
         if self.day > date.today():
@@ -350,6 +372,10 @@ class TodayPage(Gtk.Box):
             worship,
             self.day,
             entry,
-            on_changed=self.refresh,
+            on_changed=self._on_entry_details_changed,
         )
         dialog.present(self)
+
+    def _on_entry_details_changed(self) -> None:
+        self.refresh()
+        self._on_data_changed()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Callable
 
 import gi
@@ -9,10 +10,17 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gio, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 
-from ..logic.constants import APP_NAME
+from ..logic.constants import (
+    APP_NAME,
+    META_ONBOARDING_DONE,
+    SETTING_REMINDER_ENABLED,
+    SETTING_REMINDER_TIME,
+)
 from ..logic.repository import Repository
+from .a11y import set_accessible_label
+from .theme import apply_theme
 
 __all__ = ["MainWindow"]
 
@@ -26,6 +34,7 @@ class MainWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         self._repo = repository
         self._undo_callback: Callable[[], None] | None = None
+        self._reminder_day: date | None = None
 
         self.set_title(APP_NAME)
         self.set_default_size(940, 660)
@@ -33,24 +42,17 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._stack = Adw.ViewStack()
         self._today_page = self._make_today_page()
+        self._history_page = self._make_history_page()
+        self._muhasabah_page = self._make_muhasabah_page()
         self._manage_page = self._make_manage_page()
+        self._settings_page = self._make_settings_page()
+
         self._stack.add_titled_with_icon(self._today_page, "today", "Hari Ini", "go-today-symbolic")
         self._stack.add_titled_with_icon(
-            self._make_placeholder(
-                "Riwayat",
-                "Kalender dan garis tren akan tampil di sini.",
-                "calendar-symbolic",
-            ),
-            "history",
-            "Riwayat",
-            "calendar-symbolic",
+            self._history_page, "history", "Riwayat", "calendar-symbolic"
         )
         self._stack.add_titled_with_icon(
-            self._make_placeholder(
-                "Muhasabah",
-                "Catatan refleksi harian akan ditulis di sini.",
-                "document-edit-symbolic",
-            ),
+            self._muhasabah_page,
             "muhasabah",
             "Muhasabah",
             "document-edit-symbolic",
@@ -62,11 +64,7 @@ class MainWindow(Adw.ApplicationWindow):
             "view-list-symbolic",
         )
         self._stack.add_titled_with_icon(
-            self._make_placeholder(
-                "Pengaturan",
-                "Tema, pengingat, dan cadangan data akan diatur di sini.",
-                "preferences-system-symbolic",
-            ),
+            self._settings_page,
             "settings",
             "Pengaturan",
             "preferences-system-symbolic",
@@ -77,6 +75,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_actions()
         self._stack.connect("notify::visible-child-name", self._on_page_changed)
         self._on_page_changed()
+
+        GLib.idle_add(self._show_onboarding_if_needed)
+        GLib.timeout_add_seconds(60, self._check_reminder)
 
     # -- konstruksi ------------------------------------------------------
 
@@ -96,11 +97,19 @@ class MainWindow(Adw.ApplicationWindow):
 
         toggle = Gtk.Button.new_from_icon_name("sidebar-show-symbolic")
         toggle.set_tooltip_text("Lipat atau buka sidebar")
+        set_accessible_label(toggle, "Lipat atau buka sidebar")
         toggle.connect("clicked", self._on_toggle_sidebar)
         content_header.pack_start(toggle)
 
+        search_button = Gtk.Button.new_from_icon_name("system-search-symbolic")
+        search_button.set_tooltip_text("Cari catatan (Ctrl+F)")
+        set_accessible_label(search_button, "Cari catatan")
+        search_button.connect("clicked", lambda *_: self._on_search())
+        content_header.pack_end(search_button)
+
         add_button = Gtk.Button.new_from_icon_name("list-add-symbolic")
         add_button.set_tooltip_text("Ibadah baru (Ctrl+N)")
+        set_accessible_label(add_button, "Ibadah baru")
         add_button.connect("clicked", lambda *_: self.open_worship_dialog())
         content_header.pack_end(add_button)
 
@@ -127,6 +136,9 @@ class MainWindow(Adw.ApplicationWindow):
         actions = {
             "go-today": lambda *_: self.go_page("today"),
             "go-history": lambda *_: self.go_page("history"),
+            "history-day": lambda *_: self._go_history("day"),
+            "history-month": lambda *_: self._go_history("month"),
+            "history-year": lambda *_: self._go_history("year"),
             "go-muhasabah": lambda *_: self.go_page("muhasabah"),
             "go-manage": lambda *_: self.go_page("manage"),
             "go-settings": lambda *_: self.go_page("settings"),
@@ -136,23 +148,35 @@ class MainWindow(Adw.ApplicationWindow):
             "new-worship": lambda *_: self.open_worship_dialog(),
             "undo": lambda *_: self.undo(),
             "shortcuts": lambda *_: self._show_shortcuts(),
-            "search": lambda *_: self._toast(
-                "Pencarian akan hadir bersama halaman terkait.", None, None
-            ),
+            "search": lambda *_: self._on_search(),
         }
         for name, callback in actions.items():
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", callback)
             self.add_action(action)
 
-    @staticmethod
-    def _make_placeholder(title: str, description: str, icon: str) -> Adw.StatusPage:
-        return Adw.StatusPage(title=title, description=description, icon_name=icon)
-
     def _make_today_page(self):
         from .today_page import TodayPage
 
-        return TodayPage(self._repo, on_add_worship=lambda: self.open_worship_dialog())
+        return TodayPage(
+            self._repo,
+            on_add_worship=lambda: self.open_worship_dialog(),
+            on_data_changed=self.refresh_history,
+        )
+
+    def _make_history_page(self):
+        from .history_page import HistoryPage
+
+        return HistoryPage(
+            self._repo,
+            on_open_day=self._open_day,
+            on_toast=self._toast,
+        )
+
+    def _make_muhasabah_page(self):
+        from .muhasabah_page import MuhasabahPage
+
+        return MuhasabahPage(self._repo, on_toast=self._toast)
 
     def _make_manage_page(self):
         from .manage_page import ManagePage
@@ -161,6 +185,17 @@ class MainWindow(Adw.ApplicationWindow):
             self._repo,
             on_add_worship=self.open_worship_dialog,
             on_toast=self._toast,
+            on_data_changed=self.refresh_history,
+        )
+
+    def _make_settings_page(self):
+        from .settings_page import SettingsPage
+
+        return SettingsPage(
+            self._repo,
+            on_theme_changed=apply_theme,
+            on_toast=self._toast,
+            on_data_changed=self.refresh_all,
         )
 
     # -- navigasi --------------------------------------------------------
@@ -168,6 +203,27 @@ class MainWindow(Adw.ApplicationWindow):
     def go_page(self, name: str) -> None:
         self._stack.set_visible_child_name(name)
         self._hide_sidebar_when_collapsed()
+
+    def _go_history(self, mode: str) -> None:
+        self.go_page("history")
+        self._history_page.set_mode(mode)
+
+    def _open_day(self, day: date) -> None:
+        self.go_page("today")
+        self._today_page.set_day(day)
+
+    def _on_search(self) -> None:
+        self.go_page("muhasabah")
+        self._muhasabah_page.focus_search()
+
+    def refresh_history(self) -> None:
+        self._history_page.refresh()
+
+    def refresh_all(self) -> None:
+        self._today_page.refresh()
+        self._manage_page.refresh()
+        self._history_page.refresh()
+        self._muhasabah_page.refresh()
 
     def _hide_sidebar_when_collapsed(self) -> None:
         if self._split.get_collapsed():
@@ -206,8 +262,7 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.present(self)
 
     def _on_worship_saved(self, _worship_id: int) -> None:
-        self._today_page.refresh()
-        self._manage_page.refresh()
+        self.refresh_all()
         self._toast("Ibadah tersimpan", None, None)
 
     def _toast(
@@ -217,8 +272,9 @@ class MainWindow(Adw.ApplicationWindow):
         callback: Callable[[], None] | None,
     ) -> None:
         toast = Adw.Toast.new(message)
-        self._undo_callback = callback if button_label else None
         if button_label and callback is not None:
+            if button_label == "Urungkan":
+                self._undo_callback = callback
 
             def on_button_clicked(*_args: object) -> None:
                 callback()
@@ -227,6 +283,51 @@ class MainWindow(Adw.ApplicationWindow):
             toast.set_button_label(button_label)
             toast.connect("button-clicked", on_button_clicked)
         self._toast_overlay.add_toast(toast)
+
+    # -- pengenalan dan pengingat -----------------------------------------
+
+    def _show_onboarding_if_needed(self) -> bool:
+        if self._repo.get_meta(META_ONBOARDING_DONE) == "1":
+            return False
+        dialog = Adw.AlertDialog(
+            heading="Selamat datang di IslamicHabits",
+            body=(
+                "Catat ibadah sendiri, tanpa pengawas. Data tetap di komputer ini, "
+                "tanpa akun dan tanpa server. Ibadah bawaan sudah disiapkan; "
+                "Anda bisa mengubahnya lewat Kelola Ibadah.\n\n"
+                "Satu ibadah cukup satu catatan per hari. Arsip menyimpan riwayat, "
+                "dan statistik dihitung sejak ibadah mulai aktif."
+            ),
+        )
+        dialog.add_response("start", "Mulai mencatat")
+        dialog.set_default_response("start")
+        dialog.connect("response", self._on_onboarding_response)
+        dialog.present(self)
+        return False
+
+    def _on_onboarding_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
+        if response != "start":
+            return
+        self._repo.set_meta(META_ONBOARDING_DONE, "1")
+
+    def _check_reminder(self) -> bool:
+        if self._repo.get_setting(SETTING_REMINDER_ENABLED, "0") != "1":
+            return True
+        target = self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
+        try:
+            datetime.strptime(target, "%H:%M")
+        except ValueError:
+            return True
+
+        now = datetime.now()
+        if now.strftime("%H:%M") == target and self._reminder_day != now.date():
+            self._reminder_day = now.date()
+            self._toast(
+                "Waktunya mencatat ibadah dan menulis muhasabah.",
+                "Buka Muhasabah",
+                lambda: self.go_page("muhasabah"),
+            )
+        return True
 
     def _show_shortcuts(self) -> None:
         dialog = Adw.ShortcutsDialog()

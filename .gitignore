@@ -12,6 +12,9 @@ data-user/
 # Build
 build/
 builddir/
+builddir-appimage/
+repo-flatpak/
+.flatpak-builder/
 _dist/
 
 # Pengemasan

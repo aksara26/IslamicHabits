@@ -11,10 +11,12 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gio
 
-from .logic.constants import APP_ID
+from .logic.constants import APP_ID, SETTING_THEME
 from .logic.database import connect
 from .logic.repository import Repository
+from .logic.transfer import maybe_backup
 from .ui.main_window import MainWindow
+from .ui.theme import apply_theme, load_stylesheet
 
 
 class IslamicHabitsApplication(Adw.Application):
@@ -33,6 +35,15 @@ class IslamicHabitsApplication(Adw.Application):
 
         self.repository = Repository(connect())
 
+        apply_theme(self.repository.get_setting(SETTING_THEME, "sistem"))
+        load_stylesheet()
+        try:
+            maybe_backup(self.repository)
+        except OSError:
+            # Cadangan bukan syarat aplikasi dibuka; pengguna bisa mengulang
+            # dari Pengaturan saat folder tersedia.
+            pass
+
         quit_action = Gio.SimpleAction.new("quit", None)
         quit_action.connect("activate", lambda *_action: self.quit())
         self.add_action(quit_action)
@@ -41,8 +52,9 @@ class IslamicHabitsApplication(Adw.Application):
         self.set_accels_for_action("win.prev-day", ["<Ctrl>Left"])
         self.set_accels_for_action("win.next-day", ["<Ctrl>Right"])
         self.set_accels_for_action("win.today", ["<Ctrl>T"])
-        # Ctrl+1/2/3 akan menjadi harian/bulanan/tahunan saat Riwayat dibuat.
-        self.set_accels_for_action("win.go-history", ["<Ctrl>1", "<Ctrl>2", "<Ctrl>3"])
+        self.set_accels_for_action("win.history-day", ["<Ctrl>1"])
+        self.set_accels_for_action("win.history-month", ["<Ctrl>2"])
+        self.set_accels_for_action("win.history-year", ["<Ctrl>3"])
         self.set_accels_for_action("win.go-settings", ["<Ctrl>comma"])
         self.set_accels_for_action("win.new-worship", ["<Ctrl>N"])
         self.set_accels_for_action("win.search", ["<Ctrl>F"])

@@ -1,0 +1,32 @@
+/* Palet ringan IslamicHabits: tenang, netral, dan tanpa merah untuk "belum". */
+
+@define-color ih-green #1f5c4a;
+@define-color ih-accent #c9a24b;
+@define-color ih-cream #faf6ec;
+@define-color ih-ink #14231e;
+@define-color ih-night #0e1a16;
+@define-color ih-done #3e9b6e;
+@define-color ih-pending #b9b3a4;
+
+.state-kosong {
+  opacity: 0.62;
+}
+
+.state-sebagian {
+  color: @ih-green;
+}
+
+.state-penuh {
+  color: @ih-done;
+  font-weight: 700;
+}
+
+.ih-card {
+  background-color: alpha(@ih-cream, 0.45);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ih-accent {
+  color: @ih-accent;
+}
