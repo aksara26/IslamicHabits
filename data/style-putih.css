@@ -1,0 +1,43 @@
+/* Palet tema Putih: latar netral terang dengan aksen sage.
+ *
+ * Dimuat di atas style.css ketika pengguna memilih tema Putih. Latar aplikasi
+ * abu-abu sangat muda, kartu putih, dan area tulisan hampir putih dengan garis
+ * tipis supaya permukaannya tetap berbeda dari latar aplikasi.
+ */
+
+@define-color ih-sage #2f5d48;
+@define-color ih-accent #3f6f57;
+@define-color ih-surface #f4f6f4;
+@define-color ih-surface-card #ffffff;
+@define-color ih-editor-bg #fbfcfb;
+@define-color ih-hover #eef1ee;
+@define-color ih-selected #e4eae6;
+@define-color ih-line #dde3de;
+@define-color ih-ink #1a1f1b;
+@define-color ih-muted #59635c;
+@define-color ih-night #0c120e;
+@define-color ih-done #2f6b46;
+@define-color ih-pending #5b665e;
+@define-color ih-gold #866626;
+
+/* Seluruh komponen Adwaita memakai aksen sage, bukan biru bawaan. */
+@define-color accent_color @ih-sage;
+@define-color accent_bg_color @ih-sage;
+@define-color accent_fg_color #ffffff;
+@define-color window_bg_color @ih-surface;
+@define-color window_fg_color @ih-ink;
+@define-color view_bg_color @ih-surface-card;
+@define-color view_fg_color @ih-ink;
+@define-color headerbar_bg_color @ih-surface;
+@define-color headerbar_fg_color @ih-ink;
+@define-color headerbar_border_color @ih-line;
+@define-color card_bg_color @ih-surface-card;
+@define-color card_fg_color @ih-ink;
+@define-color popover_bg_color @ih-surface-card;
+@define-color popover_fg_color @ih-ink;
+@define-color sidebar_bg_color @ih-surface-card;
+@define-color sidebar_fg_color @ih-ink;
+@define-color sidebar_backdrop_color @ih-surface-card;
+@define-color sidebar_shade_color @ih-line;
+@define-color dialog_bg_color @ih-surface-card;
+@define-color dialog_fg_color @ih-ink;

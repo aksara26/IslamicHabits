@@ -25,7 +25,7 @@ from ..logic.defaults import HABIT_CATEGORY
 from ..logic.repository import Repository
 from ..logic.statistics import compute_daily
 from .a11y import set_accessible_label
-from .theme import apply_theme
+from .theme import THEME_KEYS, apply_theme, normalize_theme
 
 __all__ = ["MainWindow"]
 
@@ -332,7 +332,11 @@ class MainWindow(Adw.ApplicationWindow):
         self._manage_page.refresh()
         self._muhasabah_page.refresh()
         self._settings_page.refresh()
-        apply_theme(self._repo.get_setting(SETTING_THEME, "sistem"))
+        apply_theme(
+            normalize_theme(
+                self._repo.get_setting(SETTING_THEME, THEME_KEYS[0])
+            )
+        )
 
     def _hide_sidebar_when_collapsed(self) -> None:
         if self._split.get_collapsed():

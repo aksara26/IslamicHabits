@@ -1,22 +1,23 @@
-/* Override palet sage untuk tema gelap.
+/* Palet tema Hitam: latar netral gelap dengan aksen sage terang.
  *
- * Dimuat setelah style.css ketika Adw memakai skema gelap. Warna yang lebih
- * terang dipilih supaya teks dan penanda status tetap terbaca di atas latar
- * gelap; aturan kelas tidak diulang karena memakai nama warna yang sama.
+ * Dimuat di atas style.css ketika pengguna memilih tema Hitam. Latar aplikasi
+ * hampir hitam, kartu sedikit lebih terang, dan area tulisan memakai permukaan
+ * tersendiri agar batasnya jelas tanpa garis yang mencolok.
  */
 
-@define-color ih-sage #a8c5b2;
-@define-color ih-accent #9cc4aa;
-@define-color ih-surface #17241c;
-@define-color ih-surface-card #1e2f25;
-@define-color ih-hover #24362b;
-@define-color ih-selected #2b4033;
-@define-color ih-line #33473a;
-@define-color ih-ink #e6f0e8;
-@define-color ih-muted #b4c3b8;
-@define-color ih-night #101b15;
-@define-color ih-done #87b99a;
-@define-color ih-pending #a6b3a9;
+@define-color ih-sage #b4d0bf;
+@define-color ih-accent #a6c7b3;
+@define-color ih-surface #0d0f0e;
+@define-color ih-surface-card #171a18;
+@define-color ih-editor-bg #111412;
+@define-color ih-hover #1d211e;
+@define-color ih-selected #252b27;
+@define-color ih-line #2d332f;
+@define-color ih-ink #edf1ee;
+@define-color ih-muted #b1b8b2;
+@define-color ih-night #070908;
+@define-color ih-done #8fc6a3;
+@define-color ih-pending #aab1ab;
 @define-color ih-gold #d9b866;
 
 /* Aksen gelap memakai sage terang dengan teks gelap agar kontras tetap tinggi. */

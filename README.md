@@ -63,7 +63,7 @@ Aplikasi ini membantu pengguna mencatat dan merefleksikan ibadah hariannya (shol
 - Statistik yang sama untuk ibadah dan kebiasaan, dihitung sejak tanggal mulai aktif
 - Catatan muhasabah harian
 - Ekspor, impor, dan cadangan data (kompatibel dengan berkas lama; foto ikut diekspor sebagai base64)
-- Tema terang dan gelap dengan palet hijau sage
+- Tiga tema dengan aksen sage: **Hijau** (default), **Putih**, dan **Hitam**
 - Pengingat berdasarkan jam yang dipilih pengguna, dengan toast dan popup desktop setelah izin diberikan di dalam aplikasi
 
 ### Sengaja tidak termasuk
@@ -156,8 +156,9 @@ IslamicHabits/
 ├── data/
 │   ├── io.github.kurakura.IslamicHabits.desktop
 │   ├── io.github.kurakura.IslamicHabits.metainfo.xml
-│   ├── style.css           # aturan + palet sage terang
-│   ├── style-dark.css      # override warna sage gelap
+│   ├── style.css           # aturan + palet tema Hijau (default)
+│   ├── style-putih.css     # override warna tema Putih
+│   ├── style-hitam.css     # override warna tema Hitam
 │   └── icons/hicolor/scalable/apps/io.github.kurakura.IslamicHabits.svg
 ├── src/
 │   ├── __init__.py
@@ -403,7 +404,9 @@ Menu navbar tersendiri (`Ctrl+5`) untuk menulis memo harian dan melampirkan foto
 
 - Navigasi tanggal sendiri (sebelumnya, hari ini, berikutnya) tanpa mengubah tanggal di halaman Hari Ini
 - Editor teks dengan simpan otomatis setelah jeda singkat; teks ikut tersimpan saat pindah tanggal atau menutup jendela
-- Galeri foto berbentuk ubin: **Tambah foto** membuka dialog berkas (boleh beberapa sekaligus), klik ubin membuka foto ukuran penuh, dan tombol hapus meminta konfirmasi
+- Tata letak dipusatkan dengan lebar maksimum 820 px: kartu editor dan kartu foto tidak melebar di layar besar, dengan jarak dan margin yang konsisten
+- Kepala editor menampilkan jumlah karakter dan status simpan; area tulisan memakai permukaan `ih-editor-bg` yang berbeda dari latar aplikasi maupun kartu di sekelilingnya
+- Galeri foto berbentuk ubin: **Tambah foto** membuka dialog berkas (boleh beberapa sekaligus), klik ubin membuka foto ukuran penuh, dan tombol hapus meminta konfirmasi. Saat belum ada foto, tampil keadaan kosong dengan ikon dan petunjuk, bukan bidang putih kosong
 - Format yang diterima: JPG, PNG, WEBP, dan GIF, maksimal 25 MB per berkas. Berkas disalin ke `memo/` di folder data dengan nama unik
 - Hari lampau dan hari depan boleh diisi; label halus mengingatkan konteks tanggalnya
 - Kartu **Memo harian** di Hari Ini, Kalender, dan Histori Catatan menautkan ke halaman ini pada tanggal yang sesuai
@@ -429,7 +432,7 @@ Label navbar tetap **Kelola Ibadah**, tetapi halaman ini mengelola ibadah **dan 
 
 ### 8.9 Pengaturan
 
-- **Tampilan**: terang, gelap, atau ikut sistem; palet sage mengikuti skema yang aktif
+- **Tampilan**: tema **Hijau** (default), **Putih**, atau **Hitam**; area tulisan selalu memakai permukaan tersendiri yang berbeda dari latar aplikasi
 - **Pengingat**: hidup atau mati, jam (HH:MM), sakelar **Popup pemberitahuan** (default aktif), baris **Izin popup**, dan tombol **Uji notifikasi**; tetap hanya berjalan saat aplikasi terbuka
 - Izin popup diminta lewat dialog di dalam aplikasi hanya ketika pengguna menyalakan popup pemberitahuan, termasuk saat menyalakan pengingat dengan popup aktif. Bila ditolak, sakelar kembali mati dan pengaturan menyimpan `pengingat_izin = 0`, sehingga tidak ada popup yang dikirim tanpa izin
 - **Data**: ekspor, impor dengan pratinjau (gabungkan/timpa), pilih folder cadangan, cadangkan sekarang, lokasi data, hapus semua data (termasuk berkas foto memo)
@@ -467,36 +470,27 @@ Daftar untuk memperkirakan besar pekerjaan:
 
 ## 10. Desain Visual
 
-**Warna (hijau sage, tenang, dan netral):**
+**Warna (sage, tenang, dan netral) — tiga tema:**
 
-| Peran | Tema terang | Hex | Kontras ke latar |
+| Peran | Hijau (default) | Putih | Hitam |
 |---|---|---|---|
-| Utama | Hijau sage gelap | `#284A3A` | 8.69:1 |
-| Aksen | Hijau sage sedang | `#466951` | 5.45:1 |
-| Latar | Hijau sage sangat muda | `#EDF2EC` | — |
-| Kartu | Putih bersih | `#FFFFFF` | — |
-| Teks | Hijau sangat gelap | `#1C2B24` | 13.03:1 |
-| Selesai | Hijau daun | `#356044` | 6.37:1 |
-| Belum | Abu kehijauan | `#5D6A61` | 5.00:1 |
-| Titik tren | Emas lembut | `#866626` | 4.70:1 |
+| Latar aplikasi | `#EDF2EC` | `#F4F6F4` | `#0D0F0E` |
+| Kartu | `#FFFFFF` | `#FFFFFF` | `#171A18` |
+| Area tulisan | `#F9FCF9` | `#FBFCFB` | `#111412` |
+| Teks | `#1C2B24` | `#1A1F1B` | `#EDF1EE` |
+| Utama | `#284A3A` | `#2F5D48` | `#B4D0BF` |
+| Aksen | `#466951` | `#3F6F57` | `#A6C7B3` |
+| Selesai | `#356044` | `#2F6B46` | `#8FC6A3` |
+| Belum | `#5D6A61` | `#5B665E` | `#AAB1AB` |
+| Titik tren | `#866626` | `#866626` | `#D9B866` |
 
-| Peran | Tema gelap | Hex | Kontras ke latar |
-|---|---|---|---|
-| Utama | Sage pucat | `#A8C5B2` | 8.65:1 |
-| Aksen | Sage sedang terang | `#9CC4AA` | 8.34:1 |
-| Latar | Hijau malam | `#17241C` | — |
-| Kartu | Hijau malam lebih terang | `#1E2F25` | — |
-| Teks | Sage sangat pucat | `#E6F0E8` | 13.78:1 |
-| Selesai | Hijau daun terang | `#87B99A` | 7.23:1 |
-| Belum | Abu hangat | `#A6B3A9` | 7.39:1 |
-| Titik tren | Emas pucat | `#D9B866` | 8.42:1 |
-
-- Hindari merah untuk status belum karena memberi kesan bersalah. Status belum memakai abu kehijauan yang tetap memenuhi kontras 4.5:1 di kedua tema, tanpa transparansi.
-- **Warna terang dipakai pada tema terang; tema gelap memakai varian yang lebih pucat** agar kontras tidak turun. Rasio di atas dihitung dengan rumus kontras WCAG terhadap latar masing-masing (`#EDF2EC` dan `#17241C`).
+- **Hindari merah untuk status belum** karena memberi kesan bersalah. Status belum memakai abu kehijauan yang tetap memenuhi kontras 4.5:1 di ketiga tema, tanpa transparansi.
+- Kontras teks terhadap latar aplikasi minimal **5.00:1** (Hijau), **5.34:1** (Putih), dan **8.78:1** (Hitam). Titik tren terhadap kartu **5.33:1**, **5.33:1**, dan **9.19:1**. Rasio dihitung dengan rumus kontras WCAG.
+- **Tema Hijau dan Putih memakai skema terang; tema Hitam memakai skema gelap** lewat `Adw.StyleManager`, sehingga kontrol bawaan Adwaita tetap konsisten.
 - Kartu, garis pemisah, teks pendukung, dan tombol cepat memakai variabel tambahan `ih-surface-card`, `ih-line`, `ih-muted`, dan `ih-gold` supaya tata letak konsisten di semua halaman. `ih-hover` dan `ih-selected` menyediakan umpan balik saat baris atau tombol disentuh.
-- Sediakan mode terang dan gelap, dan hormati pengaturan sistem.
-- Aturan dan warna terang ada di `data/style.css`; `data/style-dark.css` hanya mengganti definisi warna saat tema gelap aktif. `src/ui/theme.py` menambahkan/mencopot provider gelap mengikuti `Adw.StyleManager`.
-- **Palet aplikasi didahulukan di atas tema GTK pengguna.** Banyak tema pihak ketiga (mis. Graphite) menulis warna literal pada `.background` di `~/.config/gtk-4.0/gtk.css`, yang dimuat GTK pada prioritas `USER`. Karena itu provider aplikasi dipasang satu tingkat di atasnya dan permukaan utama ditulis eksplisit. Tanpa langkah ini, memilih tema **Terang** tetap menghasilkan jendela gelap bila tema sistem gelap. Pilihan terang/gelap tetap mengikuti `Adw.StyleManager`, jadi mode sistem dan aksesibilitas teks tidak hilang.
+- **Area tulisan berbeda dari latar aplikasi.** Memo memakai variabel `ih-editor-bg` dengan kelas `.ih-editor-surface`; warnanya sengaja tidak sama dengan `ih-surface` maupun `ih-surface-card` agar batas editor langsung terlihat.
+- Aturan dan palet **Hijau** ada di `data/style.css`. `data/style-putih.css` dan `data/style-hitam.css` hanya mengganti definisi warna; `src/ui/theme.py` memasang berkas palet yang sesuai di atas stylesheet dasar. Nilai tema lama tetap dibaca: `sistem`/`terang` menjadi `hijau`, `gelap` menjadi `hitam`.
+- **Palet aplikasi didahulukan di atas tema GTK pengguna.** Banyak tema pihak ketiga (mis. Graphite) menulis warna literal pada `.background` di `~/.config/gtk-4.0/gtk.css`, yang dimuat GTK pada prioritas `USER`. Karena itu provider aplikasi dipasang satu tingkat di atasnya dan permukaan utama ditulis eksplisit. Pencarian CSS juga menyertakan `XDG_DATA_HOME` dan `~/.local/share` karena instalasi `--user` tidak menambahkan folder itu ke `XDG_DATA_DIRS`.
 - Penanda tetap memakai simbol dan teks (`○`, `◐`, `●`), bukan warna saja, lewat kelas `.state-kosong`, `.state-sebagian`, dan `.state-penuh`.
 
 > **Catatan:** kontras dihitung secara statis. Penilaian visual pada layar nyata, termasuk tema sistem yang berubah saat aplikasi terbuka, masih perlu diverifikasi di sesi GNOME 51.
@@ -601,7 +595,7 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 ## 15. Pengujian
 
-- **Logika** (statistik, hari aktif, kebiasaan, memo harian, foto, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: **79 pengujian lolos** dengan `python3 -m unittest discover -s tests -q`
+- **Logika** (statistik, hari aktif, kebiasaan, memo harian, foto, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: **83 pengujian lolos** dengan `python3 -m unittest discover -s tests -q`
 - **Versi skema** divalidasi, termasuk migrasi v1 → v2 → v3 (tabel `catatan_harian` dan `memo_foto`) serta seed kebiasaan bawaan pada basis data lama tanpa menghapus data
 - **Deret tren** diuji untuk 30 hari, per hari dalam bulan, dan per bulan dalam tahun, memakai `aktif_mulai` sebagai denominator
 - **Ekspor/impor** diuji untuk tabel baru, foto base64, penolakan nama berkas tidak aman, pratinjau, serta kompatibilitas berkas v1 yang tidak memiliki `catatan_harian` dan v2 yang tidak memiliki `memo_foto`
@@ -615,7 +609,7 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
   - Foto hilang dari folder data dan impor foto dengan nama/isi tidak valid
   - Jendela sangat kecil
   - Data kosong dan data sangat banyak
-- **Uji manual** pada lingkungan target (Fedora 45, GNOME 51): palet sage terang/gelap, perpindahan tema sistem, popup notifikasi dan tombol Uji notifikasi, serta, bila memungkinkan, distribusi atau versi GNOME lain bila aplikasi akan dibagikan
+- **Uji manual** pada lingkungan target (Fedora 45, GNOME 51): tiga tema (Hijau, Putih, Hitam), perbedaan latar area tulisan Memo, popup notifikasi dan tombol Uji notifikasi, serta, bila memungkinkan, distribusi atau versi GNOME lain bila aplikasi akan dibagikan
 
 ---
 
@@ -646,7 +640,7 @@ Cara memasang, menjalankan, memperbarui, dan mencopot aplikasi, serta lokasi dat
 - [x] 8. **Catatan harian** dan **Muhasabah**
 - [x] 9. Statistik harian / bulanan / tahunan (satu garis tren generik)
 - [x] 10. **Ekspor, impor, dan cadangan** (skema v2 → v3, kompatibel dengan v1/v2)
-- [x] 11. Pengaturan, palet sage terang/gelap, pengingat dengan popup dan izin
+- [x] 11. Pengaturan, tiga tema (Hijau, Putih, Hitam), pengingat dengan popup dan izin
 - [x] 12. Pengenalan, aksesibilitas, pemolesan
 - [x] 13. Pengemasan dan rilis `v0.1.0` di GitHub
 - [x] 14. Kebiasaan umum dalam tabel yang sama dengan ibadah, preset, dan seed migrasi
@@ -654,7 +648,7 @@ Cara memasang, menjalankan, memperbarui, dan mencopot aplikasi, serta lokasi dat
 - [x] 16. Halaman **Memo** dengan lampiran foto, kartu Memo harian, izin popup, dan baris daftar yang lebih ringkas (skema v3)
 - [x] 17. Rilis `v0.3.0` dengan Memo, foto, izin popup, dan format ekspor v3
 
-**Status akhir:** seluruh langkah 1–17 selesai. 79 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar delapan menu, Kalender terpisah, Histori Catatan, Memo dengan foto, dan ikon kubah masjid sudah terpasang. Rilis `v0.1.0` dan `v0.2.0` sudah hidup; `v0.3.0` menyiapkan halaman Memo, foto, izin popup, dan format ekspor v3. Uji visual palet sage, halaman Memo, serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
+**Status akhir:** seluruh langkah 1–17 selesai. 83 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar delapan menu, Kalender terpisah, Histori Catatan, Memo dengan foto, tiga tema, dan ikon kubah masjid sudah terpasang. Rilis `v0.1.0` dan `v0.2.0` sudah hidup; `v0.3.0` menyiapkan halaman Memo, foto, izin popup, dan format ekspor v3. Uji visual tiga tema, halaman Memo, serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
 
 ---
 

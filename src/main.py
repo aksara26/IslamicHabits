@@ -16,7 +16,7 @@ from .logic.database import connect
 from .logic.repository import Repository
 from .logic.transfer import maybe_backup
 from .ui.main_window import MainWindow
-from .ui.theme import apply_theme, load_stylesheet
+from .ui.theme import THEME_KEYS, apply_theme, load_stylesheet, normalize_theme
 
 
 class IslamicHabitsApplication(Adw.Application):
@@ -37,7 +37,11 @@ class IslamicHabitsApplication(Adw.Application):
 
         self.repository = Repository(connect())
 
-        apply_theme(self.repository.get_setting(SETTING_THEME, "sistem"))
+        theme = normalize_theme(
+            self.repository.get_setting(SETTING_THEME, THEME_KEYS[0])
+        )
+        self.repository.set_setting(SETTING_THEME, theme)
+        apply_theme(theme)
         load_stylesheet()
         try:
             maybe_backup(self.repository)

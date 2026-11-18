@@ -3,10 +3,15 @@
 Modul ini berada di lapisan antarmuka karena memakai GTK/Adw. Logika tetap
 bebas dari pustaka grafis.
 
-Palet sage disimpan dalam dua berkas: ``style.css`` memuat aturan dan warna
-terang, sedangkan ``style-dark.css`` hanya mengganti definisi warna ketika
-skema gelap aktif. Dengan begitu kontras tetap terjaga di kedua tema tanpa
-menggandakan aturan kelas.
+Ada tiga pilihan tema:
+
+- ``hijau`` (default): palet sage dengan latar hijau lembut;
+- ``putih``: latar netral terang dengan aksen sage;
+- ``hitam``: latar netral gelap dengan aksen sage terang.
+
+``style.css`` memuat aturan dan palet hijau. Dua berkas lain hanya mengganti
+definisi warna ketika tema putih atau hitam dipilih. Area tulisan memakai
+``ih-editor-bg`` yang sengaja berbeda dari latar aplikasi agar mudah dibedakan.
 """
 
 from __future__ import annotations
@@ -24,44 +29,80 @@ from gi.repository import Adw, Gdk, Gtk
 
 from ..logic.constants import APP_ID
 
-__all__ = ["THEME_KEYS", "THEME_LABELS", "apply_theme", "load_stylesheet"]
+__all__ = [
+    "THEME_KEYS",
+    "THEME_LABELS",
+    "apply_theme",
+    "load_stylesheet",
+    "normalize_theme",
+]
 
-THEME_KEYS = ("sistem", "terang", "gelap")
-THEME_LABELS = ("Ikut sistem", "Terang", "Gelap")
+THEME_KEYS = ("hijau", "putih", "hitam")
+THEME_LABELS = ("Hijau (default)", "Putih", "Hitam")
+
+# Nilai lama tetap dibaca supaya basis data dan berkas ekspor lama tidak
+# kehilangan pilihan tema pengguna.
+_LEGACY_THEMES = {
+    "sistem": "hijau",
+    "terang": "hijau",
+    "gelap": "hitam",
+}
 
 _COLOR_SCHEMES = {
-    "sistem": Adw.ColorScheme.DEFAULT,
-    "terang": Adw.ColorScheme.FORCE_LIGHT,
-    "gelap": Adw.ColorScheme.FORCE_DARK,
+    "hijau": Adw.ColorScheme.FORCE_LIGHT,
+    "putih": Adw.ColorScheme.FORCE_LIGHT,
+    "hitam": Adw.ColorScheme.FORCE_DARK,
+}
+
+_PALETTE_FILES = {
+    "hijau": None,
+    "putih": "style-putih.css",
+    "hitam": "style-hitam.css",
 }
 
 # Tema GTK milik pengguna (mis. Graphite) dimuat GTK pada prioritas USER dan
 # sering menulis warna literal seperti ``.background { background-color: ... }``.
-# Tanpa berada di atasnya, palet sage aplikasi kalah dan jendela bisa tetap
-# gelap meski skema "Terang" dipilih. Palet aplikasi sengaja didahulukan agar
-# warna dan kontras konsisten; pilihan terang/gelap tetap mengikuti StyleManager.
+# Tanpa berada di atasnya, palet aplikasi kalah dan jendela bisa tetap gelap
+# meski tema terang dipilih. Palet aplikasi sengaja didahulukan agar warna dan
+# kontras konsisten; skema terang/gelap tetap diatur lewat StyleManager.
 _PROVIDER_PRIORITY = Gtk.STYLE_PROVIDER_PRIORITY_USER + 1
 
 _current_theme = THEME_KEYS[0]
 _display: Gdk.Display | None = None
 _base_provider: Gtk.CssProvider | None = None
-_dark_provider: Gtk.CssProvider | None = None
-_style_signal_connected = False
+_palette_provider: Gtk.CssProvider | None = None
 
 
-def apply_theme(theme: str) -> None:
-    """Terapkan pilihan tema ke style manager dan palet stylesheet."""
+def normalize_theme(theme: str | None) -> str:
+    """Kembalikan kunci tema yang dikenal, termasuk konversi nilai lama."""
+
+    if theme in THEME_KEYS:
+        return str(theme)
+    return _LEGACY_THEMES.get(theme or "", THEME_KEYS[0])
+
+
+def apply_theme(theme: str) -> str:
+    """Terapkan pilihan tema dan kembalikan kunci yang sudah dinormalkan."""
 
     global _current_theme
-    _current_theme = theme if theme in THEME_KEYS else THEME_KEYS[0]
+    _current_theme = normalize_theme(theme)
     Adw.StyleManager.get_default().set_color_scheme(
         _COLOR_SCHEMES[_current_theme]
     )
-    _update_dark_provider()
+    _update_palette()
+    return _current_theme
 
 
 def _stylesheet_path(filename: str) -> Path | None:
     candidates = [Path(__file__).resolve().parents[2] / "data" / filename]
+
+    # XDG_DATA_HOME (biasanya ~/.local/share) tidak termasuk XDG_DATA_DIRS,
+    # padahal di situlah instalasi --user menaruh stylesheet.
+    data_home = os.environ.get("XDG_DATA_HOME")
+    user_data = Path(data_home) if data_home else Path.home() / ".local" / "share"
+    candidates.append(user_data / APP_ID / filename)
+    candidates.append(Path.home() / ".local" / "share" / APP_ID / filename)
+
     data_dirs = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share")
     for root in data_dirs.split(":"):
         if root:
@@ -70,48 +111,30 @@ def _stylesheet_path(filename: str) -> Path | None:
 
 
 def _remove_providers() -> None:
-    global _display, _base_provider, _dark_provider
+    global _display, _base_provider, _palette_provider
     if _display is not None:
-        for provider in (_base_provider, _dark_provider):
+        for provider in (_base_provider, _palette_provider):
             if provider is not None:
                 Gtk.StyleContext.remove_provider_for_display(_display, provider)
     _display = None
     _base_provider = None
-    _dark_provider = None
+    _palette_provider = None
 
 
-def _is_dark_theme() -> bool:
-    if _current_theme == "gelap":
-        return True
-    if _current_theme == "terang":
-        return False
-    return bool(Adw.StyleManager.get_default().get_dark())
+def _update_palette() -> None:
+    """Ganti berkas palet di atas stylesheet dasar sesuai tema aktif."""
 
-
-def _on_style_changed(*_args: object) -> None:
-    """Ikuti perubahan skema sistem ketika pilihan tema adalah 'sistem'."""
-
-    _update_dark_provider()
-
-
-def _connect_style_signal() -> None:
-    global _style_signal_connected
-    if _style_signal_connected:
-        return
-    Adw.StyleManager.get_default().connect("notify::dark", _on_style_changed)
-    _style_signal_connected = True
-
-
-def _update_dark_provider() -> None:
-    global _dark_provider
+    global _palette_provider
     if _display is None or _base_provider is None:
         return
-    if _dark_provider is not None:
-        Gtk.StyleContext.remove_provider_for_display(_display, _dark_provider)
-        _dark_provider = None
-    if not _is_dark_theme():
+    if _palette_provider is not None:
+        Gtk.StyleContext.remove_provider_for_display(_display, _palette_provider)
+        _palette_provider = None
+
+    filename = _PALETTE_FILES[_current_theme]
+    if filename is None:
         return
-    path = _stylesheet_path("style-dark.css")
+    path = _stylesheet_path(filename)
     if path is None:
         return
     provider = Gtk.CssProvider()
@@ -124,7 +147,7 @@ def _update_dark_provider() -> None:
         provider,
         _PROVIDER_PRIORITY + 1,
     )
-    _dark_provider = provider
+    _palette_provider = provider
 
 
 def load_stylesheet() -> None:
@@ -150,5 +173,4 @@ def load_stylesheet() -> None:
     )
     _display = display
     _base_provider = provider
-    _connect_style_signal()
-    _update_dark_provider()
+    _update_palette()

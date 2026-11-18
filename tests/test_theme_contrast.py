@@ -1,4 +1,4 @@
-"""Pengujian kontras palet sage tanpa GTK.
+"""Pengujian kontras palet tema tanpa GTK.
 
 Berkas CSS dibaca sebagai teks biasa supaya rasio kontras tetap bisa dijaga
 tanpa membuka jendela. Ambang 4.5:1 memakai aturan WCAG untuk teks biasa.
@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COLOR_RE = re.compile(r"@define-color\s+ih-([a-z-]+)\s+(#[0-9a-fA-F]{6});")
 MIN_RATIO = 4.5
 TEXT_ROLES = ("sage", "accent", "ink", "done", "pending")
+LIGHT_THEMES = ("hijau", "putih")
 
 
 def _read_colors(filename: str) -> dict[str, str]:
@@ -38,23 +39,34 @@ def _contrast(first: str, second: str) -> float:
 class ThemeContrastTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.light = _read_colors("style.css")
-        cls.dark = dict(cls.light)
-        cls.dark.update(_read_colors("style-dark.css"))
+        cls.hijau = _read_colors("style.css")
+        cls.putih = dict(cls.hijau)
+        cls.putih.update(_read_colors("style-putih.css"))
+        cls.hitam = dict(cls.hijau)
+        cls.hitam.update(_read_colors("style-hitam.css"))
+        cls.palettes = {
+            "hijau": cls.hijau,
+            "putih": cls.putih,
+            "hitam": cls.hitam,
+        }
 
-    def test_light_palette_has_enough_contrast(self) -> None:
-        background = self.light["surface"]
+    def test_light_palettes_have_enough_contrast(self) -> None:
+        for name in LIGHT_THEMES:
+            palette = self.palettes[name]
+            background = palette["surface"]
+            for role in TEXT_ROLES:
+                with self.subTest(theme=name, role=role):
+                    self.assertGreaterEqual(
+                        _contrast(palette[role], background), MIN_RATIO
+                    )
+
+    def test_dark_palette_has_enough_contrast(self) -> None:
+        background = self.hitam["night"]
         for role in TEXT_ROLES:
             with self.subTest(role=role):
                 self.assertGreaterEqual(
-                    _contrast(self.light[role], background), MIN_RATIO
+                    _contrast(self.hitam[role], background), MIN_RATIO
                 )
-
-    def test_dark_palette_has_enough_contrast(self) -> None:
-        background = self.dark["night"]
-        for role in TEXT_ROLES:
-            with self.subTest(role=role):
-                self.assertGreaterEqual(_contrast(self.dark[role], background), MIN_RATIO)
 
     def test_empty_state_does_not_use_opacity(self) -> None:
         text = (ROOT / "data" / "style.css").read_text(encoding="utf-8")
@@ -66,11 +78,27 @@ class ThemeContrastTests(unittest.TestCase):
     def test_gold_marker_has_enough_contrast(self) -> None:
         """Titik tren emas harus terlihat di atas kartu, bukan hanya di latar."""
 
-        for palette in (self.light, self.dark):
-            with self.subTest(theme=palette["surface"]):
+        for name, palette in self.palettes.items():
+            with self.subTest(theme=name):
                 self.assertGreaterEqual(
                     _contrast(palette["gold"], palette["surface-card"]), MIN_RATIO
                 )
+
+    def test_editor_surface_differs_from_window(self) -> None:
+        """Area tulisan harus punya latar berbeda dari latar aplikasi."""
+
+        for name, palette in self.palettes.items():
+            with self.subTest(theme=name):
+                self.assertIn("editor-bg", palette)
+                self.assertNotEqual(palette["editor-bg"], palette["surface"])
+                self.assertNotEqual(palette["editor-bg"], palette["surface-card"])
+
+        text = (ROOT / "data" / "style.css").read_text(encoding="utf-8")
+        block = re.search(r"\.ih-editor-surface\s*\{([^}]*)\}", text)
+        self.assertIsNotNone(block)
+        self.assertIn(
+            "background-color: @ih-editor-bg;", block.group(1)  # type: ignore[union-attr]
+        )
 
     def test_window_surface_is_declared_explicitly(self) -> None:
         """Palet aplikasi harus menang atas tema GTK pengguna.
@@ -88,6 +116,13 @@ class ThemeContrastTests(unittest.TestCase):
         self.assertIn(
             "_PROVIDER_PRIORITY = Gtk.STYLE_PROVIDER_PRIORITY_USER + 1", source
         )
+
+    def test_stylesheet_lookup_includes_user_data_home(self) -> None:
+        """Instalasi --user menaruh CSS di XDG_DATA_HOME, bukan XDG_DATA_DIRS."""
+
+        source = (ROOT / "src" / "ui" / "theme.py").read_text(encoding="utf-8")
+        self.assertIn("XDG_DATA_HOME", source)
+        self.assertIn('Path.home() / ".local" / "share"', source)
 
 
 if __name__ == "__main__":

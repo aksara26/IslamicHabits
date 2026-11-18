@@ -82,7 +82,8 @@ install_data(
 )
 install_data(
   'data/style.css',
-  'data/style-dark.css',
+  'data/style-putih.css',
+  'data/style-hitam.css',
   install_dir: join_paths(datadir, app_id),
 )
 

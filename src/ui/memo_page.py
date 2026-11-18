@@ -59,8 +59,8 @@ class MemoPage(Gtk.Box):
 
     def _build_navigation(self) -> None:
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.set_margin_start(12)
-        box.set_margin_end(12)
+        box.set_margin_start(18)
+        box.set_margin_end(18)
         box.set_margin_top(12)
 
         previous = Gtk.Button.new_from_icon_name("go-previous-symbolic")
@@ -72,6 +72,7 @@ class MemoPage(Gtk.Box):
         self._date_label = Gtk.Label(label="")
         self._date_label.set_hexpand(True)
         self._date_label.set_xalign(0.5)
+        self._date_label.add_css_class("ih-page-date")
         box.append(self._date_label)
 
         today = Gtk.Button(label="Hari ini")
@@ -88,15 +89,15 @@ class MemoPage(Gtk.Box):
 
         self._context_label = Gtk.Label(label="")
         self._context_label.set_xalign(0.5)
-        self._context_label.add_css_class("dim-label")
+        self._context_label.add_css_class("ih-hint")
 
-        wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         wrapper.append(box)
         wrapper.append(self._context_label)
         self.append(wrapper)
 
     def _build_content(self) -> None:
-        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         content.set_margin_start(18)
         content.set_margin_end(18)
         content.set_margin_top(6)
@@ -105,50 +106,65 @@ class MemoPage(Gtk.Box):
         content.append(self._build_editor_card())
         content.append(self._build_photo_card())
 
+        # Batasi lebar agar baris teks tidak melebar di layar besar.
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(820)
+        clamp.set_tightening_threshold(620)
+        clamp.set_child(content)
+
         scrolled = Gtk.ScrolledWindow(vexpand=True)
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_child(content)
+        scrolled.set_child(clamp)
         self.append(scrolled)
 
     def _build_editor_card(self) -> Gtk.Box:
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         card.add_css_class("ih-card")
 
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         title = Gtk.Label(label="Tulis memo")
         title.set_xalign(0)
+        title.set_hexpand(True)
         title.add_css_class("ih-section-title")
-        hint = Gtk.Label(
-            label=(
-                "Catatan ini tersimpan otomatis di komputer ini. "
-                "Gunakan foto di bawah untuk melampirkan gambar."
-            )
-        )
-        hint.set_xalign(0)
-        hint.set_wrap(True)
-        hint.add_css_class("ih-hint")
+
+        self._note_count = Gtk.Label(label="0 karakter")
+        self._note_count.add_css_class("ih-hint")
+        self._note_count.set_valign(Gtk.Align.CENTER)
+        header.append(title)
+        header.append(self._note_count)
 
         self._note_view = Gtk.TextView()
         self._note_view.set_wrap_mode(Gtk.WrapMode.WORD)
         self._note_view.set_accepts_tab(False)
+        self._note_view.set_top_margin(8)
+        self._note_view.set_bottom_margin(8)
+        self._note_view.set_left_margin(10)
+        self._note_view.set_right_margin(10)
         self._note_view.get_buffer().connect("changed", self._on_note_changed)
         set_accessible_label(self._note_view, "Memo harian")
+
         note_scroll = Gtk.ScrolledWindow()
-        note_scroll.set_min_content_height(150)
+        note_scroll.set_min_content_height(170)
         note_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         note_scroll.set_child(self._note_view)
+
+        # Permukaan editor memakai warna tersendiri, berbeda dari latar
+        # aplikasi dan dari kartu putih di sekelilingnya.
+        surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        surface.add_css_class("ih-editor-surface")
+        surface.append(note_scroll)
 
         self._note_status = Gtk.Label(label="Tersimpan otomatis")
         self._note_status.set_xalign(0)
         self._note_status.add_css_class("ih-hint")
 
-        card.append(title)
-        card.append(hint)
-        card.append(note_scroll)
+        card.append(header)
+        card.append(surface)
         card.append(self._note_status)
         return card
 
     def _build_photo_card(self) -> Gtk.Box:
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         card.add_css_class("ih-card")
 
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -159,6 +175,7 @@ class MemoPage(Gtk.Box):
 
         self._photo_count = Gtk.Label(label="")
         self._photo_count.add_css_class("ih-hint")
+        self._photo_count.set_valign(Gtk.Align.CENTER)
 
         add_button = Gtk.Button(label="Tambah foto")
         add_button.add_css_class("ih-quick")
@@ -169,20 +186,34 @@ class MemoPage(Gtk.Box):
         header.append(add_button)
 
         self._photo_stack = Gtk.Stack()
-        self._photo_empty = Gtk.Label(
-            label="Belum ada foto. Lampirkan gambar untuk mengingat suasana hari ini."
+
+        empty_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        empty_box.add_css_class("ih-empty")
+        empty_icon = Gtk.Image.new_from_icon_name("insert-image-symbolic")
+        empty_icon.set_pixel_size(32)
+        empty_icon.set_halign(Gtk.Align.CENTER)
+        empty_icon.add_css_class("dim-label")
+        empty_label = Gtk.Label(
+            label=(
+                "Belum ada foto. Lampirkan gambar untuk mengingat suasana "
+                "hari ini."
+            )
         )
-        self._photo_empty.set_xalign(0)
-        self._photo_empty.set_wrap(True)
-        self._photo_empty.add_css_class("ih-hint")
+        empty_label.set_wrap(True)
+        empty_label.set_justify(Gtk.Justification.CENTER)
+        empty_label.set_xalign(0.5)
+        empty_label.add_css_class("ih-hint")
+        empty_box.append(empty_icon)
+        empty_box.append(empty_label)
+        self._photo_empty = empty_box
 
         self._photo_flow = Gtk.FlowBox()
         self._photo_flow.set_selection_mode(Gtk.SelectionMode.NONE)
         self._photo_flow.set_homogeneous(True)
         self._photo_flow.set_min_children_per_line(1)
         self._photo_flow.set_max_children_per_line(4)
-        self._photo_flow.set_row_spacing(8)
-        self._photo_flow.set_column_spacing(8)
+        self._photo_flow.set_row_spacing(10)
+        self._photo_flow.set_column_spacing(10)
 
         self._photo_stack.add_named(self._photo_empty, "empty")
         self._photo_stack.add_named(self._photo_flow, "photos")
@@ -203,14 +234,20 @@ class MemoPage(Gtk.Box):
         try:
             record = self._repo.get_daily_note(self.day)
             self._note_view.get_buffer().set_text(record.text)
-            self._note_status.set_label("Tersimpan otomatis")
+            self._update_note_meta("Tersimpan otomatis")
         finally:
             self._note_loading = False
+
+    def _update_note_meta(self, status: str | None = None) -> None:
+        text = self._note_text()
+        self._note_count.set_label(f"{len(text)} karakter")
+        if status is not None:
+            self._note_status.set_label(status)
 
     def _on_note_changed(self, *_args: object) -> None:
         if self._note_loading:
             return
-        self._note_status.set_label("Menunggu penyimpanan…")
+        self._update_note_meta("Menyimpan…")
         if self._note_source is not None:
             GLib.source_remove(self._note_source)
         self._note_source = GLib.timeout_add_seconds(1, self._autosave_note)
@@ -222,7 +259,7 @@ class MemoPage(Gtk.Box):
 
     def _save_note_now(self, *, notify: bool = True) -> None:
         self._repo.save_daily_note(self.day, self._note_text())
-        self._note_status.set_label("Tersimpan otomatis")
+        self._update_note_meta("Tersimpan otomatis")
         if notify:
             self._on_data_changed()
 

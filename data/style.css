@@ -14,6 +14,7 @@
 @define-color ih-accent #466951;
 @define-color ih-surface #edf2ec;
 @define-color ih-surface-card #ffffff;
+@define-color ih-editor-bg #f9fcf9;
 @define-color ih-hover #eef4ef;
 @define-color ih-selected #e1ebe3;
 @define-color ih-line #dae4db;
@@ -280,6 +281,39 @@ button.ih-photo-remove:hover {
 
 .ih-hint {
   color: @ih-muted;
+}
+
+/* Area tulisan sengaja memakai permukaan berbeda dari latar aplikasi dan
+ * kartu, dengan garis tipis agar batasnya jelas di ketiga tema. */
+.ih-editor-surface {
+  background-color: @ih-editor-bg;
+  border: 1px solid @ih-line;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.ih-editor-surface textview,
+.ih-editor-surface textview > text {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.ih-editor-surface:focus-within {
+  border-color: @ih-accent;
+  box-shadow: 0 0 0 1px alpha(@ih-accent, 0.35);
+}
+
+.ih-page-date {
+  color: @ih-ink;
+  font-weight: 700;
+}
+
+/* Keadaan kosong pada galeri foto: bidang lembut, bukan area putih kosong. */
+.ih-empty {
+  background-color: alpha(@ih-sage, 0.04);
+  border: 1px dashed alpha(@ih-sage, 0.30);
+  border-radius: 10px;
+  padding: 20px;
 }
 
 /* Tombol tambah cepat memakai nada sage lembut agar tidak bersaing dengan

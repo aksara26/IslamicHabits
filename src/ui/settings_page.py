@@ -36,7 +36,7 @@ from ..logic.transfer import (
     parse_export,
     write_export,
 )
-from .theme import THEME_KEYS, THEME_LABELS
+from .theme import THEME_KEYS, THEME_LABELS, normalize_theme
 
 __all__ = ["SettingsPage", "THEME_KEYS", "THEME_LABELS"]
 
@@ -88,11 +88,10 @@ class SettingsPage(Gtk.Box):
 
         self._refreshing = True
         try:
-            theme = self._repo.get_setting(SETTING_THEME, THEME_KEYS[0])
-            try:
-                self._theme_row.set_selected(THEME_KEYS.index(theme))
-            except ValueError:
-                self._theme_row.set_selected(0)
+            theme = normalize_theme(
+                self._repo.get_setting(SETTING_THEME, THEME_KEYS[0])
+            )
+            self._theme_row.set_selected(THEME_KEYS.index(theme))
 
             self._reminder_switch.set_active(
                 self._repo.get_setting(SETTING_REMINDER_ENABLED, "0") == "1"
@@ -109,15 +108,23 @@ class SettingsPage(Gtk.Box):
             self._refreshing = False
 
     def _build_display_group(self) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(title="Tampilan")
+        group = Adw.PreferencesGroup(
+            title="Tampilan",
+            description=(
+                "Warna latar aplikasi. Area tulisan memakai permukaan "
+                "tersendiri agar mudah dibedakan."
+            ),
+        )
 
-        self._theme_row = Adw.ComboRow(title="Tema", subtitle="Terang, gelap, atau ikut sistem")
+        self._theme_row = Adw.ComboRow(
+            title="Tema",
+            subtitle="Hijau sage (default), putih, atau hitam",
+        )
         self._theme_row.set_model(Gtk.StringList.new(list(THEME_LABELS)))
-        current = self._repo.get_setting(SETTING_THEME, THEME_KEYS[0])
-        try:
-            self._theme_row.set_selected(THEME_KEYS.index(current))
-        except ValueError:
-            self._theme_row.set_selected(0)
+        current = normalize_theme(
+            self._repo.get_setting(SETTING_THEME, THEME_KEYS[0])
+        )
+        self._theme_row.set_selected(THEME_KEYS.index(current))
         self._theme_row.connect("notify::selected", self._on_theme_selected)
         group.add(self._theme_row)
         return group

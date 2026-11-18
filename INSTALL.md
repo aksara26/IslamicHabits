@@ -199,8 +199,8 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
 3. Sesuaikan daftar di **Kelola Ibadah**: tambah, ubah, urutkan, atau arsipkan.
    Arsip tidak menghapus riwayat. Tombol **Tambah kebiasaan** menyiapkan preset
    kebiasaan dengan kategori **Kebiasaan**; pintasannya `Ctrl+Shift+N`.
-4. Isi **Pengaturan** bila ingin tema tertentu (palet sage terang/gelap),
-   pengingat harian, popup pemberitahuan, atau folder cadangan.
+4. Isi **Pengaturan** bila ingin tema tertentu (**Hijau** default, **Putih**,
+   atau **Hitam**), pengingat harian, popup pemberitahuan, atau folder cadangan.
 5. Sidebar memiliki delapan menu terpisah: **Hari Ini**, **Riwayat**,
    **Kalender**, **Histori Catatan**, **Memo**, **Muhasabah**, **Kelola Ibadah**,
    dan **Pengaturan**. Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender,

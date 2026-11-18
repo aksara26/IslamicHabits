@@ -259,6 +259,39 @@ class UiSmokeTests(unittest.TestCase):
         calendar.refresh()
         self.assertIn("diizinkan", calendar._reminder_label.get_label())
 
+    def test_tema_tersedia_dan_nilai_lama_dinormalkan(self) -> None:
+        from src.ui.theme import THEME_KEYS, normalize_theme
+
+        self.assertEqual(THEME_KEYS, ("hijau", "putih", "hitam"))
+        self.assertEqual(normalize_theme("sistem"), "hijau")
+        self.assertEqual(normalize_theme("terang"), "hijau")
+        self.assertEqual(normalize_theme("gelap"), "hitam")
+        self.assertEqual(normalize_theme("putih"), "putih")
+        self.assertEqual(normalize_theme(None), "hijau")
+
+        settings = SettingsPage(
+            self.repo,
+            on_theme_changed=lambda _theme: None,
+            on_toast=self._toast,
+            on_data_changed=lambda: None,
+            on_test_notification=lambda: None,
+        )
+        model = settings._theme_row.get_model()
+        labels = [model.get_string(index) for index in range(model.get_n_items())]
+        self.assertEqual(labels, ["Hijau (default)", "Putih", "Hitam"])
+
+    def test_memo_punya_area_tulisan_dan_hitungan_karakter(self) -> None:
+        memo = MemoPage(
+            self.repo,
+            on_data_changed=lambda: None,
+            on_toast=self._toast,
+        )
+        memo._note_view.get_buffer().set_text("Halo memo")
+        self.assertEqual(memo._note_count.get_label(), "9 karakter")
+        self.assertEqual(memo._note_status.get_label(), "Menyimpan…")
+        memo._flush_note()
+        self.assertEqual(memo._note_status.get_label(), "Tersimpan otomatis")
+
     def test_garis_tren_bisa_difokus(self) -> None:
         self.assertTrue(TrendLine().get_focusable())
 
