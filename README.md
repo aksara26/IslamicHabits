@@ -2,7 +2,7 @@
 
 Aplikasi desktop Linux untuk mencatat ibadah harian secara pribadi. Dibuat untuk penggunaan sendiri, data tersimpan lokal, tanpa akun, tanpa server, dan didistribusikan lewat GitHub.
 
-> **Status:** tahap implementasi awal. Keputusan desain sudah dikunci, kerangka logika statistik dan komponen garis tren sudah ada; sebagian besar halaman belum dibuat.
+> **Status:** tahap implementasi awal. Keputusan desain sudah dikunci. Lapisan data SQLite, jendela utama dengan navigasi, halaman **Hari Ini**, dan **Kelola Ibadah** sudah berjalan. Halaman Riwayat, Muhasabah, Pengaturan, pengenalan, ekspor/impor, dan pengemasan masih berupa placeholder atau belum dibuat.
 
 ---
 
@@ -110,7 +110,7 @@ Pasang juga `flatpak` dan `flatpak-builder` bila ingin membuat paket Flatpak. Da
 ### Menjalankan dan menguji dari sumber
 
 ```bash
-python3 -m src.main          # jalankan jendela kosong
+python3 -m src.main          # jalankan aplikasi (data dibuat otomatis di XDG_DATA_HOME)
 python3 -m unittest discover -s tests -q
 ```
 
@@ -136,7 +136,7 @@ Tiga lapisan dengan pemisahan tegas:
 
 **Aturan utama:** lapisan logika tidak boleh bergantung pada antarmuka. Dengan begitu logika bisa diuji tanpa membuka jendela dan antarmuka bisa diubah tanpa menulis ulang inti.
 
-### Usulan struktur proyek (konseptual)
+### Struktur proyek saat ini
 
 ```
 IslamicHabits/
@@ -151,17 +151,26 @@ IslamicHabits/
 ├── src/
 │   ├── __init__.py
 │   ├── islamichabits       # launcher setelah terpasang
-│   ├── main.py             # Adw.Application
+│   ├── main.py             # Adw.Application + pembukaan basis data
 │   ├── logic/
 │   │   ├── __init__.py
 │   │   ├── constants.py    # APP_NAME, APP_ID, versi skema/ekspor
-│   │   └── statistics.py   # aturan harian/bulanan/tahunan, murni Python
+│   │   ├── defaults.py     # ibadah bawaan saat basis data dibuat
+│   │   ├── statistics.py   # aturan harian/bulanan/tahunan, murni Python
+│   │   ├── database.py     # koneksi SQLite, skema, migrasi
+│   │   └── repository.py   # CRUD tanpa GTK
 │   └── ui/
 │       ├── __init__.py
-│       ├── main_window.py  # jendela kosong + placeholder
+│       ├── main_window.py  # navigasi adaptif + aksi/pintasan
+│       ├── today_page.py   # halaman Hari Ini
+│       ├── worship_row.py  # tiga varian baris ibadah
+│       ├── worship_dialog.py
+│       ├── manage_page.py  # Kelola Ibadah
 │       └── trend_line.py   # Gtk.DrawingArea + Cairo
 ├── tests/
-│   └── test_statistics.py  # 14 pengujian logika, tanpa GTK
+│   ├── test_statistics.py
+│   ├── test_database.py
+│   └── test_repository.py
 └── packaging/              # belum dibuat: Flatpak, AppImage
 ```
 
@@ -176,8 +185,8 @@ Tetapkan di awal karena mengubahnya belakangan memengaruhi desktop entry, identi
 - **Nama tampilan:** IslamicHabits
 - **ID aplikasi:** `io.github.kurakura.IslamicHabits`
 - **Lisensi:** GPL-3.0-or-later (berkas `LICENSE`)
-- Ikon yang tetap jelas pada ukuran kecil (belum dibuat)
-- Kategori dan deskripsi singkat untuk peluncur aplikasi (belum dibuat)
+- Ikon SVG dan desktop entry sudah dibuat; tetap periksa keterbacaan ikon pada ukuran kecil
+- Kategori dan deskripsi singkat untuk peluncur aplikasi sudah ada di desktop entry
 
 ---
 
@@ -505,10 +514,10 @@ Menerbitkan ke Flathub adalah langkah terpisah dengan aturannya sendiri dan tida
 
 - [x] 1. Tetapkan nama (`IslamicHabits`), ID (`io.github.kurakura.IslamicHabits`), lisensi (GPL-3.0-or-later), format ekspor JSON, dan target v1 = Fedora 45
 - [x] 2. Siapkan lingkungan pengembangan dan jendela kosong (`Adw.Application` + `Adw.StatusPage`), plus `meson.build`, desktop entry, metadata AppStream, dan ikon
-- [ ] 3. Bangun lapisan data dan skema, disertai pengujian
-- [ ] 4. Jendela utama dan navigasi
-- [ ] 5. Halaman **Hari Ini** dengan tiga jenis baris ibadah
-- [ ] 6. **Kelola Ibadah**
+- [x] 3. Bangun lapisan data dan skema, disertai pengujian
+- [x] 4. Jendela utama dan navigasi
+- [x] 5. Halaman **Hari Ini** dengan tiga jenis baris ibadah
+- [x] 6. **Kelola Ibadah**
 - [ ] 7. **Riwayat** dan kalender
 - [ ] 8. **Muhasabah**
 - [ ] 9. Statistik harian / bulanan / tahunan (garis tren) — logika dasar sudah ada di `src/logic/statistics.py`
@@ -517,9 +526,9 @@ Menerbitkan ke Flathub adalah langkah terpisah dengan aturannya sendiri dan tida
 - [ ] 12. Pengenalan, aksesibilitas, pemolesan
 - [ ] 13. Pengemasan dan rilis di GitHub
 
-**Rekomendasi:** selesaikan sampai langkah 5 dan 6 lebih dulu, pakai sendiri beberapa hari, baru lanjutkan.
+**Rekomendasi:** langkah 3–6 sudah selesai. Pakai aplikasi beberapa hari lebih dulu, lalu lanjutkan ke langkah 7.
 
-Catatan: jendela kosong sudah lolos uji impor, pembuatan objek, dan instalasi Meson di lingkungan headless. Uji visual di sesi GNOME nyata masih perlu dilakukan sebelum menambah halaman.
+Catatan: 30 pengujian logika/data lolos, pembuatan objek UI lolos secara headless, dan instalasi Meson berhasil. Uji visual di sesi GNOME 51 nyata masih perlu dilakukan sebelum melanjutkan halaman berikutnya.
 
 ---
 

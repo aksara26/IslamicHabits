@@ -16,6 +16,7 @@ from src.logic.statistics import (
     compute_range,
     compute_yearly_series,
     describe_completion,
+    describe_daily_completion,
     is_active,
     is_completed,
 )
@@ -160,6 +161,10 @@ class LabelTests(unittest.TestCase):
         self.assertEqual(describe_completion(18, 30), "Terlaksana 18 dari 30 hari")
         self.assertEqual(
             describe_completion(0, 0), "Tidak ada ibadah aktif pada rentang ini"
+        )
+        self.assertEqual(describe_daily_completion(3, 5), "Terlaksana 3 dari 5 ibadah")
+        self.assertEqual(
+            describe_daily_completion(0, 0), "Tidak ada ibadah aktif hari ini"
         )
 
 

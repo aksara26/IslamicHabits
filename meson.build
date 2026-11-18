@@ -27,12 +27,19 @@ python3.install_sources(
 python3.install_sources(
   'src/logic/__init__.py',
   'src/logic/constants.py',
+  'src/logic/defaults.py',
   'src/logic/statistics.py',
+  'src/logic/database.py',
+  'src/logic/repository.py',
   subdir: 'islamichabits/logic',
 )
 python3.install_sources(
   'src/ui/__init__.py',
   'src/ui/main_window.py',
+  'src/ui/today_page.py',
+  'src/ui/worship_row.py',
+  'src/ui/worship_dialog.py',
+  'src/ui/manage_page.py',
   'src/ui/trend_line.py',
   subdir: 'islamichabits/ui',
 )

@@ -39,6 +39,7 @@ __all__ = [
     "compute_range",
     "compute_yearly_series",
     "describe_completion",
+    "describe_daily_completion",
 ]
 
 
@@ -404,8 +405,16 @@ def compute_yearly_series(
 
 
 def describe_completion(completed: int, expected: int) -> str:
-    """Kalimat netral; sengaja tidak memakai 'gagal' atau persentase."""
+    """Kalimat netral untuk rentang hari; tidak memakai 'gagal'."""
 
     if expected <= 0:
         return "Tidak ada ibadah aktif pada rentang ini"
     return f"Terlaksana {completed} dari {expected} hari"
+
+
+def describe_daily_completion(completed: int, expected: int) -> str:
+    """Kalimat netral untuk satu hari (satuan: ibadah)."""
+
+    if expected <= 0:
+        return "Tidak ada ibadah aktif hari ini"
+    return f"Terlaksana {completed} dari {expected} ibadah"
