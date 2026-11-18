@@ -342,7 +342,7 @@ class TodayPage(Gtk.Box):
         self.set_day(date.today())
 
     def set_day(self, day: date) -> None:
-        """Tampilkan tanggal tertentu, misalnya dari kalender Riwayat."""
+        """Tampilkan tanggal tertentu, misalnya dari Kalender atau Histori Catatan."""
 
         self._flush_note()
         self.day = day

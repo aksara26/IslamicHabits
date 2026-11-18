@@ -20,7 +20,9 @@ Bila rilis ini mengubah skema atau format ekspor, sebutkan nomor versinya dalam
 catatan rilis. Versi saat ini adalah skema dan ekspor **v2**, yang menambahkan
 tabel `catatan_harian` dan tetap menerima berkas ekspor v1. Sertakan pula
 catatan bahwa popup pengingat memerlukan izin notifikasi sistem, sementara toast
-dalam aplikasi tetap menjadi cadangan.
+dalam aplikasi tetap menjadi cadangan. Sebutkan pula perubahan antarmuka pada rilis
+ini: navbar tujuh menu, Kalender terpisah dari Riwayat, halaman Histori Catatan,
+pintasan `Ctrl+4`, dan ikon kubah masjid bergaya sage.
 
 ## 2. Flatpak (utama)
 

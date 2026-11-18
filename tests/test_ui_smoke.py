@@ -20,8 +20,10 @@ if GTK_TERSEDIA:
     from src.logic.database import connect
     from src.logic.repository import Repository
     from src.logic.statistics import EntryKind
+    from src.ui.calendar_page import CalendarPage
     from src.ui.history_page import HistoryPage
     from src.ui.muhasabah_page import MuhasabahPage
+    from src.ui.note_history_page import NoteHistoryPage
     from src.ui.settings_page import SettingsPage
     from src.ui.today_page import TodayPage
     from src.ui.trend_line import TrendLine
@@ -51,6 +53,17 @@ class UiSmokeTests(unittest.TestCase):
         history = HistoryPage(
             self.repo,
             on_open_day=lambda _day: None,
+            on_open_calendar=lambda _day: None,
+            on_toast=self._toast,
+        )
+        calendar = CalendarPage(
+            self.repo,
+            on_open_day=lambda _day: None,
+            on_toast=self._toast,
+        )
+        notes = NoteHistoryPage(
+            self.repo,
+            on_open_day=lambda _day: None,
             on_toast=self._toast,
         )
         muhasabah = MuhasabahPage(self.repo, on_toast=self._toast)
@@ -62,7 +75,7 @@ class UiSmokeTests(unittest.TestCase):
             on_test_notification=lambda: None,
         )
 
-        for page in (today, history, muhasabah, settings):
+        for page in (today, history, calendar, notes, muhasabah, settings):
             self.assertIsNotNone(page.get_first_child())
 
     def test_kartu_catatan_harian_tersimpan(self) -> None:
@@ -91,23 +104,22 @@ class UiSmokeTests(unittest.TestCase):
         )
         self.repo.save_daily_note(day, "Catatan harian kemarin")
 
-        history = HistoryPage(
+        calendar = CalendarPage(
             self.repo,
             on_open_day=lambda _day: None,
             on_toast=self._toast,
         )
-        history.go_to_day(day)
-        history.set_mode("month")
+        calendar.go_to_day(day)
 
-        self.assertEqual(history._views.get_visible_child_name(), "month")
+        self.assertEqual(calendar._calendar_selected, day)
         self.assertIn(
             "Terlaksana 1 dari 1 ibadah",
-            history._calendar_detail_state.get_label(),
+            calendar._calendar_detail_state.get_label(),
         )
-        self.assertIn("●", history._calendar_detail_state.get_label())
+        self.assertIn("●", calendar._calendar_detail_state.get_label())
 
         rows = []
-        child = history._calendar_detail_list.get_first_child()
+        child = calendar._calendar_detail_list.get_first_child()
         while child is not None:
             rows.append(child)
             child = child.get_next_sibling()
@@ -116,11 +128,51 @@ class UiSmokeTests(unittest.TestCase):
         self.assertIn("Selesai", rows[0].get_subtitle())
         self.assertIn("catatan ibadah kemarin", rows[0].get_subtitle())
         self.assertIn(
-            "Catatan harian kemarin", history._calendar_detail_note.get_label()
+            "Catatan harian kemarin", calendar._calendar_detail_note.get_label()
         )
 
-        history.set_mode("day")
-        self.assertIn("Catatan harian kemarin", history._day_note_text.get_label())
+    def test_histori_catatan_harian_hanya_memuat_catatan_harian(self) -> None:
+        day = date.today() - timedelta(days=1)
+        worship = self.repo.add_worship(
+            name="Subuh kemarin", kind=EntryKind.CHECK, active_from=day
+        )
+        self.repo.set_entry(worship.id, day, value=True, note="catatan ibadah rahasia")
+        self.repo.save_muhasabah(day, "muhasabah rahasia")
+        self.repo.save_daily_note(day, "Catatan harian kemarin")
+
+        opened: list[date] = []
+        page = NoteHistoryPage(
+            self.repo,
+            on_open_day=opened.append,
+            on_toast=self._toast,
+        )
+        self.assertEqual(len(page._visible_notes), 1)
+        self.assertEqual(page._visible_notes[0].text, "Catatan harian kemarin")
+
+        page._search_entry.set_text("rahasia")
+        self.assertEqual(page._visible_notes, ())
+        page._search_entry.set_text("Catatan harian")
+        self.assertEqual(len(page._visible_notes), 1)
+
+        row = page._notes_list.get_row_at_index(0)
+        self.assertIsNotNone(row)
+        page._notes_list.emit("row-activated", row)
+        self.assertEqual(opened, [day])
+
+    def test_riwayat_tidak_lagi_memilih_mode_kalender(self) -> None:
+        opened: list[date] = []
+        history = HistoryPage(
+            self.repo,
+            on_open_day=lambda _day: None,
+            on_open_calendar=opened.append,
+            on_toast=self._toast,
+        )
+        history.set_mode("month")
+        self.assertEqual(history._views.get_visible_child_name(), "day")
+        self.assertEqual(history._toggle.get_active_name(), "day")
+
+        history._on_month_activated(None, 3)
+        self.assertEqual(opened, [date(history._anchor.year, 3, 1)])
 
     def test_garis_tren_bisa_difokus(self) -> None:
         self.assertTrue(TrendLine().get_focusable())

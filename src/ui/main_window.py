@@ -45,13 +45,27 @@ class MainWindow(Adw.ApplicationWindow):
         self._stack = Adw.ViewStack()
         self._today_page = self._make_today_page()
         self._history_page = self._make_history_page()
+        self._calendar_page = self._make_calendar_page()
+        self._note_history_page = self._make_note_history_page()
         self._muhasabah_page = self._make_muhasabah_page()
         self._manage_page = self._make_manage_page()
         self._settings_page = self._make_settings_page()
 
         self._stack.add_titled_with_icon(self._today_page, "today", "Hari Ini", "go-today-symbolic")
         self._stack.add_titled_with_icon(
-            self._history_page, "history", "Riwayat", "calendar-symbolic"
+            self._history_page, "history", "Riwayat", "view-list-ordered-symbolic"
+        )
+        self._stack.add_titled_with_icon(
+            self._calendar_page,
+            "calendar",
+            "Kalender",
+            "office-calendar-symbolic",
+        )
+        self._stack.add_titled_with_icon(
+            self._note_history_page,
+            "note-history",
+            "Histori Catatan",
+            "text-x-generic-symbolic",
         )
         self._stack.add_titled_with_icon(
             self._muhasabah_page,
@@ -109,6 +123,7 @@ class MainWindow(Adw.ApplicationWindow):
         set_accessible_label(search_button, "Cari catatan")
         search_button.connect("clicked", lambda *_: self._on_search())
         content_header.pack_end(search_button)
+        self._search_button = search_button
 
         add_button = Gtk.Button.new_from_icon_name("list-add-symbolic")
         add_button.set_tooltip_text("Ibadah baru (Ctrl+N)")
@@ -140,8 +155,11 @@ class MainWindow(Adw.ApplicationWindow):
             "go-today": lambda *_: self.go_page("today"),
             "go-history": lambda *_: self.go_page("history"),
             "history-day": lambda *_: self._go_history("day"),
-            "history-month": lambda *_: self._go_history("month"),
+            # Alias lama tetap diterima, sekarang membuka halaman Kalender.
+            "history-month": lambda *_: self._go_calendar(),
             "history-year": lambda *_: self._go_history("year"),
+            "go-calendar": lambda *_: self._go_calendar(),
+            "go-note-history": lambda *_: self.go_page("note-history"),
             "go-muhasabah": lambda *_: self.go_page("muhasabah"),
             "go-manage": lambda *_: self.go_page("manage"),
             "go-settings": lambda *_: self.go_page("settings"),
@@ -171,6 +189,25 @@ class MainWindow(Adw.ApplicationWindow):
         from .history_page import HistoryPage
 
         return HistoryPage(
+            self._repo,
+            on_open_day=self._open_day,
+            on_open_calendar=self._go_calendar,
+            on_toast=self._toast,
+        )
+
+    def _make_calendar_page(self):
+        from .calendar_page import CalendarPage
+
+        return CalendarPage(
+            self._repo,
+            on_open_day=self._open_day,
+            on_toast=self._toast,
+        )
+
+    def _make_note_history_page(self):
+        from .note_history_page import NoteHistoryPage
+
+        return NoteHistoryPage(
             self._repo,
             on_open_day=self._open_day,
             on_toast=self._toast,
@@ -212,20 +249,34 @@ class MainWindow(Adw.ApplicationWindow):
         self.go_page("history")
         self._history_page.set_mode(mode)
 
+    def _go_calendar(self, day: date | None = None) -> None:
+        """Buka Kalender; bila ``day`` diberikan, arahkan ke bulan itu."""
+
+        self.go_page("calendar")
+        if day is None:
+            self._calendar_page.refresh()
+        else:
+            self._calendar_page.go_to_month(day)
+
     def _open_day(self, day: date) -> None:
         self.go_page("today")
         self._today_page.set_day(day)
 
     def _on_search(self) -> None:
+        if self._stack.get_visible_child_name() == "note-history":
+            self._note_history_page.focus_search()
+            return
         self.go_page("muhasabah")
         self._muhasabah_page.focus_search()
 
     def refresh_history(self) -> None:
         self._history_page.refresh()
+        self._calendar_page.refresh()
+        self._note_history_page.refresh()
 
     def refresh_today_and_history(self) -> None:
         self._today_page.refresh()
-        self._history_page.refresh()
+        self.refresh_history()
 
     def refresh_all(self) -> None:
         self.refresh_today_and_history()
@@ -245,12 +296,21 @@ class MainWindow(Adw.ApplicationWindow):
             self._split.set_show_sidebar(not self._split.get_show_sidebar())
 
     def _on_page_changed(self, *_args: object) -> None:
-        title = self._stack.get_visible_child_name() or "Hari Ini"
+        name = self._stack.get_visible_child_name() or "today"
+        title = name
         page = self._stack.get_page(self._stack.get_visible_child())
         if page is not None:
             title = page.get_title() or title
         self._window_title.set_title(title)
         self._content_page.set_title(title)
+
+        hints = {
+            "note-history": ("Cari catatan harian (Ctrl+F)", "Cari catatan harian"),
+            "muhasabah": ("Cari muhasabah (Ctrl+F)", "Cari muhasabah"),
+        }
+        tooltip, label = hints.get(name, ("Cari catatan (Ctrl+F)", "Cari catatan"))
+        self._search_button.set_tooltip_text(tooltip)
+        set_accessible_label(self._search_button, label)
 
     def _go_to_today(self, action: Callable[[], None]) -> None:
         self.go_page("today")
@@ -393,8 +453,9 @@ class MainWindow(Adw.ApplicationWindow):
                     ("Hari berikutnya", "<Ctrl>Right"),
                     ("Kembali ke hari ini", "<Ctrl>T"),
                     ("Riwayat (harian)", "<Ctrl>1"),
-                    ("Kalender (bulanan)", "<Ctrl>2"),
+                    ("Kalender", "<Ctrl>2"),
                     ("Riwayat (tahunan)", "<Ctrl>3"),
+                    ("Histori Catatan", "<Ctrl>4"),
                 ),
             ),
             (

@@ -21,8 +21,9 @@
     <release version="0.1.0" date="2026-11-18">
       <description>
         <p>
-          Versi pertama: pencatatan harian, kelola ibadah, riwayat harian/bulanan/tahunan,
-          muhasabah, statistik, pengaturan tema dan pengingat, serta ekspor, impor, dan cadangan.
+          Versi pertama: pencatatan harian, kelola ibadah, riwayat harian dan tahunan,
+          kalender terpisah, histori catatan harian, muhasabah, statistik, pengaturan tema
+          dan pengingat, serta ekspor, impor, dan cadangan.
         </p>
       </description>
     </release>

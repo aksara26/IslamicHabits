@@ -148,10 +148,15 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
    Arsip tidak menghapus riwayat.
 4. Isi **Pengaturan** bila ingin tema tertentu (palet sage terang/gelap),
    pengingat harian, popup pemberitahuan, atau folder cadangan.
-5. Gunakan `Ctrl+1` / `Ctrl+2` / `Ctrl+3` untuk membuka Riwayat harian,
-   Kalender, dan tahunan.
+5. Sidebar memiliki tujuh menu terpisah: **Hari Ini**, **Riwayat**, **Kalender**,
+   **Histori Catatan**, **Muhasabah**, **Kelola Ibadah**, dan **Pengaturan**.
+   Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender, `Ctrl+3` Riwayat
+   tahunan, dan `Ctrl+4` Histori Catatan.
 6. Di bawah daftar **Hari Ini** tersedia kartu **Catatan harian** yang tersimpan
-   otomatis. Catatan yang sama tampil pada detail hari di Riwayat dan Kalender.
+   otomatis. Catatan yang sama tampil pada detail hari di Riwayat dan Kalender,
+   serta sebagai daftar di **Histori Catatan** (catatan harian saja).
+7. `Ctrl+F` memfokuskan pencarian catatan harian bila **Histori Catatan** sedang
+   aktif; di halaman lain pintasan ini membuka pencarian muhasabah.
 
 Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
 
