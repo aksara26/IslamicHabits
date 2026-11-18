@@ -2,7 +2,7 @@
 
 Aplikasi desktop Linux untuk mencatat ibadah **dan kebiasaan** harian secara pribadi. Dibuat untuk penggunaan sendiri, data tersimpan lokal, tanpa akun, tanpa server, dan didistribusikan lewat GitHub.
 
-> **Status:** versi 0.3.0 siap untuk uji pakai. Ibadah dan kebiasaan umum (belajar, baca buku, olahraga, dan lain-lain) memakai satu sistem pencatatan dan satu statistik. Tersedia tren garis **harian, bulanan per hari, dan tahunan per bulan**, Hari Ini sebagai ringkasan dengan tombol tambah cepat, **halaman Memo dengan lampiran foto**, Kalender terpisah, Histori Catatan, Muhasabah, Pengaturan, pengingat dengan izin popup, aksesibilitas dasar, ekspor/impor/cadangan, serta installer satu perintah tanpa `sudo`. Palet sage dan tata letak sudah dirapikan di semua halaman. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
+> **Status:** versi 0.3.1 siap untuk uji pakai. Ibadah dan kebiasaan umum (belajar, baca buku, olahraga, dan lain-lain) memakai satu sistem pencatatan dan satu statistik. Tersedia tren garis **harian, bulanan per hari, dan tahunan per bulan**, Hari Ini sebagai ringkasan dengan tombol tambah cepat, **halaman Memo dengan lampiran foto**, Kalender terpisah, Histori Catatan, Muhasabah, Pengaturan, pengingat dengan izin popup, aksesibilitas dasar, ekspor/impor/cadangan, serta installer satu perintah tanpa `sudo`. Palet sage dan tata letak sudah dirapikan di semua halaman. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
 
 > **Panduan instalasi:** [`INSTALL.md`](INSTALL.md). Berkas ini fokus pada fitur, arsitektur, dan perilaku aplikasi.
 
@@ -647,8 +647,9 @@ Cara memasang, menjalankan, memperbarui, dan mencopot aplikasi, serta lokasi dat
 - [x] 15. Tren bulanan per hari, kartu visual, dan sinkronisasi versi `0.2.0`
 - [x] 16. Halaman **Memo** dengan lampiran foto, kartu Memo harian, izin popup, dan baris daftar yang lebih ringkas (skema v3)
 - [x] 17. Rilis `v0.3.0` dengan Memo, foto, izin popup, dan format ekspor v3
+- [x] 18. Rilis patch `v0.3.1`: pemulihan tiga tema, pencarian stylesheet instalasi `--user`, tata letak Memo, dan launcher absolut
 
-**Status akhir:** seluruh langkah 1–17 selesai. 83 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar delapan menu, Kalender terpisah, Histori Catatan, Memo dengan foto, tiga tema, dan ikon kubah masjid sudah terpasang. Rilis `v0.1.0` dan `v0.2.0` sudah hidup; `v0.3.0` menyiapkan halaman Memo, foto, izin popup, dan format ekspor v3. Uji visual tiga tema, halaman Memo, serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
+**Status akhir:** seluruh langkah 1–18 selesai. 83 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar delapan menu, Kalender terpisah, Histori Catatan, Memo dengan foto, tiga tema, dan ikon kubah masjid sudah terpasang. Rilis `v0.1.0`, `v0.2.0`, dan `v0.3.0` sudah hidup; `v0.3.1` memperbaiki pemuatan tema, launcher desktop, dan tata letak Memo. Uji visual tiga tema, halaman Memo, serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
 
 ---
 

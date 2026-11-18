@@ -1,7 +1,7 @@
 project(
   'IslamicHabits',
   'c',
-  version: '0.3.0',
+  version: '0.3.1',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 0.63.0',
 )

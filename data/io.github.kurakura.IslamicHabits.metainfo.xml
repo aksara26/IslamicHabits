@@ -19,6 +19,17 @@
   </developer>
   <url type="homepage">https://github.com/aksara26/IslamicHabits</url>
   <releases>
+    <release version="0.3.1" date="2026-11-18">
+      <description>
+        <p>
+          Perbaikan tema: pilihan Hijau (default), Putih, dan Hitam kembali
+          termuat, termasuk pada instalasi --user. Halaman Memo dirapikan dengan
+          lebar terbatas, hitungan karakter, dan area tulisan yang latarnya
+          berbeda dari latar aplikasi. Launcher desktop memakai jalur absolut
+          agar aplikasi bisa dibuka dari GNOME Shell.
+        </p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-18">
       <description>
         <p>

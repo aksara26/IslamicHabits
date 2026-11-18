@@ -35,6 +35,7 @@ memperbarui hanya dengan satu perintah `curl ... | bash` tanpa `sudo`.
 
 ### Riwayat rilis
 
+- **v0.3.1**: perbaikan pemuatan tiga tema (Hijau, Putih, Hitam) pada instalasi `--user`, tata letak Memo yang lebih rapi dengan area tulisan berbeda, dan launcher desktop berjalur absolut.
 - **v0.2.0**: ibadah dan kebiasaan umum memakai satu tabel dan satu statistik; preset kebiasaan; tren garis harian, bulanan, dan tahunan; navbar tujuh menu.
 - **v0.1.0**: versi pertama dengan pencatatan harian, kelola ibadah, riwayat, kalender, histori catatan, muhasabah, pengaturan, serta ekspor/impor/cadangan.
 
