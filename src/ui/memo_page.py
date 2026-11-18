@@ -1,14 +1,19 @@
 """Halaman Memo: catatan harian bebas dan foto untuk satu tanggal.
 
 Memo sengaja dipisahkan dari Hari Ini supaya daftar ibadah tetap ringkas,
-tetapi kartu kecil di bawah checklist tetap menautkan ke halaman ini. Teks
-disimpan di ``catatan_harian`` dan foto di ``memo_foto``; berkas foto berada
-di folder data pengguna, bukan di dalam basis data.
+tetapi kartu kecil di Hari Ini tetap menautkan ke halaman ini. Teks disimpan
+di ``catatan_harian`` dan foto di ``memo_foto``; berkas foto berada di folder
+data pengguna, bukan di dalam basis data.
+
+Tombol **Memo sebelumnya** membuka daftar tanggal yang sudah punya memo,
+lengkap dengan cuplikan teks dan jumlah foto, sehingga pengguna tidak perlu
+menekan panah hari satu per satu.
 """
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+import sqlite3
+from datetime import date, datetime, timedelta
 from typing import Callable
 
 import gi
@@ -23,7 +28,9 @@ from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango
 
 from ..logic.repository import MemoPhotoRecord, Repository
 from .a11y import set_accessible_label
+from .date_navigator import DateNavigator
 from .history_common import format_day
+from .memo_history import MemoHistoryDialog
 
 __all__ = ["MemoPage"]
 
@@ -32,7 +39,7 @@ DataChangedCallback = Callable[[], None]
 
 
 class MemoPage(Gtk.Box):
-    """Editor memo harian dengan lampiran foto."""
+    """Editor memo harian dengan lampiran foto dan penjelajah memo lama."""
 
     def __init__(
         self,
@@ -47,6 +54,7 @@ class MemoPage(Gtk.Box):
         self._on_toast = on_toast
         self.day = date.today()
         self._known_today = date.today()
+        self._loaded_day: date | None = None
         self._note_source: int | None = None
         self._note_loading = False
 
@@ -58,43 +66,46 @@ class MemoPage(Gtk.Box):
     # -- konstruksi ------------------------------------------------------
 
     def _build_navigation(self) -> None:
+        self._nav = DateNavigator(
+            on_previous=self.go_previous_day,
+            on_next=self.go_next_day,
+            on_today=self.go_today,
+            on_pick=self.set_day,
+        )
+        self.append(self._nav)
+
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        actions.set_margin_start(18)
+        actions.set_margin_end(18)
+        actions.set_margin_top(6)
+
+        history = Gtk.Button()
+        history.add_css_class("ih-quick")
+        history.add_css_class("ih-memo-history")
+        history.set_tooltip_text("Lihat daftar memo dari tanggal lain")
+        history.set_child(self._icon_label("document-open-recent-symbolic", "Memo sebelumnya"))
+        set_accessible_label(history, "Lihat memo sebelumnya")
+        history.connect("clicked", self._open_history)
+        actions.append(history)
+
+        actions.append(Gtk.Box(hexpand=True))
+
+        save = Gtk.Button()
+        save.add_css_class("ih-quick")
+        save.set_tooltip_text("Simpan sekarang (Ctrl+S)")
+        save.set_child(self._icon_label("document-save-symbolic", "Simpan"))
+        set_accessible_label(save, "Simpan memo sekarang")
+        save.connect("clicked", self._on_save_clicked)
+        actions.append(save)
+
+        self.append(actions)
+
+    @staticmethod
+    def _icon_label(icon: str, label: str) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.set_margin_start(18)
-        box.set_margin_end(18)
-        box.set_margin_top(12)
-
-        previous = Gtk.Button.new_from_icon_name("go-previous-symbolic")
-        previous.set_tooltip_text("Memo hari sebelumnya")
-        set_accessible_label(previous, "Memo hari sebelumnya")
-        previous.connect("clicked", lambda *_: self.go_previous_day())
-        box.append(previous)
-
-        self._date_label = Gtk.Label(label="")
-        self._date_label.set_hexpand(True)
-        self._date_label.set_xalign(0.5)
-        self._date_label.add_css_class("ih-page-date")
-        box.append(self._date_label)
-
-        today = Gtk.Button(label="Hari ini")
-        today.set_tooltip_text("Kembali ke memo hari ini")
-        set_accessible_label(today, "Kembali ke memo hari ini")
-        today.connect("clicked", lambda *_: self.go_today())
-        box.append(today)
-
-        following = Gtk.Button.new_from_icon_name("go-next-symbolic")
-        following.set_tooltip_text("Memo hari berikutnya")
-        set_accessible_label(following, "Memo hari berikutnya")
-        following.connect("clicked", lambda *_: self.go_next_day())
-        box.append(following)
-
-        self._context_label = Gtk.Label(label="")
-        self._context_label.set_xalign(0.5)
-        self._context_label.add_css_class("ih-hint")
-
-        wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        wrapper.append(box)
-        wrapper.append(self._context_label)
-        self.append(wrapper)
+        box.append(Gtk.Image.new_from_icon_name(icon))
+        box.append(Gtk.Label(label=label))
+        return box
 
     def _build_content(self) -> None:
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
@@ -144,7 +155,7 @@ class MemoPage(Gtk.Box):
         set_accessible_label(self._note_view, "Memo harian")
 
         note_scroll = Gtk.ScrolledWindow()
-        note_scroll.set_min_content_height(170)
+        note_scroll.set_min_content_height(190)
         note_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         note_scroll.set_child(self._note_view)
 
@@ -152,15 +163,40 @@ class MemoPage(Gtk.Box):
         # aplikasi dan dari kartu putih di sekelilingnya.
         surface = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         surface.add_css_class("ih-editor-surface")
-        surface.append(note_scroll)
+
+        overlay = Gtk.Overlay()
+        overlay.set_child(note_scroll)
+        self._placeholder = Gtk.Label(
+            label=(
+                "Tulis apa yang kamu syukuri, pelajari, atau ingin ingat "
+                "hari ini…"
+            )
+        )
+        self._placeholder.set_xalign(0)
+        self._placeholder.set_yalign(0)
+        self._placeholder.set_wrap(True)
+        self._placeholder.set_margin_top(10)
+        self._placeholder.set_margin_start(12)
+        self._placeholder.set_margin_end(12)
+        self._placeholder.set_can_target(False)
+        self._placeholder.add_css_class("ih-placeholder")
+        overlay.add_overlay(self._placeholder)
+        surface.append(overlay)
 
         self._note_status = Gtk.Label(label="Tersimpan otomatis")
         self._note_status.set_xalign(0)
         self._note_status.add_css_class("ih-hint")
 
+        footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        footer.append(self._note_status)
+        footer.append(Gtk.Box(hexpand=True))
+        self._saved_at = Gtk.Label(label="")
+        self._saved_at.add_css_class("ih-hint")
+        footer.append(self._saved_at)
+
         card.append(header)
         card.append(surface)
-        card.append(self._note_status)
+        card.append(footer)
         return card
 
     def _build_photo_card(self) -> Gtk.Box:
@@ -233,10 +269,17 @@ class MemoPage(Gtk.Box):
         self._note_loading = True
         try:
             record = self._repo.get_daily_note(self.day)
-            self._note_view.get_buffer().set_text(record.text)
-            self._update_note_meta("Tersimpan otomatis")
+            # Jangan reset status simpan saat penyegaran dari halaman lain
+            # membawa teks yang sama; status "Tersimpan HH:MM" harus tetap
+            # terlihat sampai pengguna mengetik lagi atau pindah tanggal.
+            if self._loaded_day != self.day or self._note_text() != record.text:
+                self._note_view.get_buffer().set_text(record.text)
+                self._update_note_meta("Tersimpan otomatis")
+                self._saved_at.set_label("")
+            self._loaded_day = self.day
         finally:
             self._note_loading = False
+        self._sync_placeholder()
 
     def _update_note_meta(self, status: str | None = None) -> None:
         text = self._note_text()
@@ -244,10 +287,14 @@ class MemoPage(Gtk.Box):
         if status is not None:
             self._note_status.set_label(status)
 
+    def _sync_placeholder(self) -> None:
+        self._placeholder.set_visible(not self._note_text().strip())
+
     def _on_note_changed(self, *_args: object) -> None:
         if self._note_loading:
             return
         self._update_note_meta("Menyimpan…")
+        self._sync_placeholder()
         if self._note_source is not None:
             GLib.source_remove(self._note_source)
         self._note_source = GLib.timeout_add_seconds(1, self._autosave_note)
@@ -258,8 +305,13 @@ class MemoPage(Gtk.Box):
         return False
 
     def _save_note_now(self, *, notify: bool = True) -> None:
-        self._repo.save_daily_note(self.day, self._note_text())
-        self._update_note_meta("Tersimpan otomatis")
+        try:
+            self._repo.save_daily_note(self.day, self._note_text())
+        except sqlite3.Error:
+            self._note_status.set_label("Gagal menyimpan — coba lagi")
+            return
+        self._note_status.set_label("Tersimpan")
+        self._saved_at.set_label(datetime.now().strftime("%H:%M"))
         if notify:
             self._on_data_changed()
 
@@ -268,6 +320,30 @@ class MemoPage(Gtk.Box):
             GLib.source_remove(self._note_source)
             self._note_source = None
             self._save_note_now(notify=notify)
+
+    def save_now(self) -> None:
+        """Simpan segera; dipakai tombol Simpan dan pintasan Ctrl+S."""
+
+        self._flush_note()
+        self._save_note_now()
+        self._on_toast("Memo disimpan", None, None)
+
+    def _on_save_clicked(self, _button: Gtk.Button) -> None:
+        self.save_now()
+
+    # -- memo sebelumnya -------------------------------------------------
+
+    def _open_history(self, _button: Gtk.Button) -> None:
+        self._flush_note()
+        dialog = MemoHistoryDialog(
+            self._repo,
+            current_day=self.day,
+            on_open=self._open_from_history,
+        )
+        dialog.present(self.get_root() or self)
+
+    def _open_from_history(self, day: date) -> None:
+        self.set_day(day)
 
     # -- foto ------------------------------------------------------------
 
@@ -326,32 +402,99 @@ class MemoPage(Gtk.Box):
         set_accessible_label(open_button, f"Buka foto {index}")
         open_button.connect("clicked", lambda *_: self._open_photo(photo))
 
-        remove_button = Gtk.Button.new_from_icon_name("user-trash-symbolic")
-        remove_button.add_css_class("flat")
-        remove_button.add_css_class("ih-photo-remove")
-        remove_button.set_halign(Gtk.Align.END)
-        remove_button.set_valign(Gtk.Align.START)
-        remove_button.set_tooltip_text("Hapus foto")
-        set_accessible_label(remove_button, f"Hapus foto {index}")
-        remove_button.connect("clicked", lambda *_: self._confirm_delete_photo(photo))
+        caption = photo.caption.strip() or f"Foto {index}"
+        label = Gtk.Label(label=caption)
+        label.set_xalign(0)
+        label.set_hexpand(True)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.set_max_width_chars(20)
+        label.add_css_class("ih-hint")
 
-        overlay = Gtk.Overlay()
-        overlay.set_child(open_button)
-        overlay.add_overlay(remove_button)
+        menu = self._photo_menu(photo, index)
+
+        caption_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        caption_row.append(label)
+        caption_row.append(menu)
 
         tile = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         tile.add_css_class("ih-photo-tile")
         tile.set_halign(Gtk.Align.START)
         tile.set_valign(Gtk.Align.START)
-        tile.append(overlay)
-        caption = photo.caption.strip() or f"Foto {index}"
-        label = Gtk.Label(label=caption)
-        label.set_xalign(0)
-        label.set_ellipsize(Pango.EllipsizeMode.END)
-        label.set_max_width_chars(22)
-        label.add_css_class("ih-hint")
-        tile.append(label)
+        tile.append(open_button)
+        tile.append(caption_row)
         return tile
+
+    def _photo_menu(self, photo: MemoPhotoRecord, index: int) -> Gtk.MenuButton:
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        box.set_margin_top(6)
+        box.set_margin_bottom(6)
+        box.set_margin_start(6)
+        box.set_margin_end(6)
+
+        view = Gtk.Button(label="Lihat foto")
+        view.set_halign(Gtk.Align.FILL)
+        view.add_css_class("flat")
+        view.connect("clicked", lambda *_: (popover.popdown(), self._open_photo(photo)))
+        box.append(view)
+
+        caption = Gtk.Button(label="Ubah keterangan")
+        caption.set_halign(Gtk.Align.FILL)
+        caption.add_css_class("flat")
+        caption.connect(
+            "clicked", lambda *_: (popover.popdown(), self._edit_caption(photo))
+        )
+        box.append(caption)
+
+        remove = Gtk.Button(label="Hapus foto")
+        remove.set_halign(Gtk.Align.FILL)
+        remove.add_css_class("flat")
+        remove.add_css_class("ih-danger")
+        remove.connect(
+            "clicked", lambda *_: (popover.popdown(), self._confirm_delete_photo(photo))
+        )
+        box.append(remove)
+
+        popover.set_child(box)
+
+        button = Gtk.MenuButton()
+        button.add_css_class("flat")
+        button.add_css_class("ih-photo-menu")
+        button.set_icon_name("view-more-symbolic")
+        button.set_tooltip_text(f"Aksi foto {index}")
+        button.set_popover(popover)
+        set_accessible_label(button, f"Aksi foto {index}")
+        return button
+
+    def _edit_caption(self, photo: MemoPhotoRecord) -> None:
+        dialog = Adw.AlertDialog(
+            heading="Ubah keterangan foto",
+            body="Keterangan tampil di bawah foto dan ikut tersimpan di memo.",
+        )
+        entry = Gtk.Entry()
+        entry.set_text(photo.caption)
+        entry.set_placeholder_text("Mis. Suasana setelah subuh")
+        dialog.set_extra_child(entry)
+        dialog.add_response("cancel", "Batal")
+        dialog.add_response("save", "Simpan")
+        dialog.set_default_response("save")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_caption_response, photo, entry)
+        dialog.present(self.get_root() or self)
+
+    def _on_caption_response(
+        self,
+        _dialog: Adw.AlertDialog,
+        response: str,
+        photo: MemoPhotoRecord,
+        entry: Gtk.Entry,
+    ) -> None:
+        if response != "save":
+            return
+        self._repo.update_memo_caption(photo.id, entry.get_text())
+        self._refresh_photos()
+        self._on_data_changed()
+        self._on_toast("Keterangan foto diperbarui", None, None)
 
     def _on_add_photos(self, _button: Gtk.Button) -> None:
         dialog = Gtk.FileDialog(title="Tambah foto memo")
@@ -405,6 +548,9 @@ class MemoPage(Gtk.Box):
         close = Gtk.Button(label="Tutup")
         close.connect("clicked", lambda *_: dialog.close())
         header.pack_start(close)
+        caption = Gtk.Button(label="Ubah keterangan")
+        caption.connect("clicked", lambda *_: self._edit_caption(photo))
+        header.pack_end(caption)
 
         picture = Gtk.Picture.new_for_filename(str(path))
         picture.set_can_shrink(True)
@@ -444,17 +590,19 @@ class MemoPage(Gtk.Box):
 
     # -- navigasi tanggal ------------------------------------------------
 
+    @staticmethod
+    def _context_for(day: date) -> str:
+        if day > date.today():
+            return "Hari depan — memo masih bisa ditulis"
+        if day < date.today():
+            return "Mengisi memo hari lampau"
+        return ""
+
     def refresh(self) -> None:
         # Simpan ketikan yang masih menunggu autosave sebelum buffer dimuat
         # ulang, supaya penyegaran dari halaman lain tidak menghapus teks.
         self._flush_note()
-        self._date_label.set_label(format_day(self.day))
-        if self.day > date.today():
-            self._context_label.set_label("Hari depan — memo masih bisa ditulis")
-        elif self.day < date.today():
-            self._context_label.set_label("Mengisi memo hari lampau")
-        else:
-            self._context_label.set_label("")
+        self._nav.set_day(self.day, context=self._context_for(self.day))
         self._load_note()
         self._refresh_photos()
 
@@ -482,7 +630,7 @@ class MemoPage(Gtk.Box):
         today = date.today()
         if today != self._known_today:
             self._known_today = today
-            self._context_label.set_label("Hari sudah berganti; buka memo hari ini.")
+            self._nav.set_day(self.day, context=self._context_for(self.day))
         return True
 
     def do_dispose(self) -> None:

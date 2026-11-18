@@ -42,6 +42,7 @@ class ManagePage(Gtk.Box):
         self._on_toast = on_toast
         self._on_data_changed = on_data_changed
         self._show_archived = False
+        self._sort_mode = False
 
         header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         header_box.set_margin_start(18)
@@ -54,6 +55,13 @@ class ManagePage(Gtk.Box):
         label.set_max_width_chars(32)
         label.add_css_class("ih-hint")
         header_box.append(label)
+
+        self._sort_toggle = Gtk.ToggleButton(label="Urutkan")
+        self._sort_toggle.set_tooltip_text(
+            "Tampilkan tombol naik dan turun pada setiap baris"
+        )
+        self._sort_toggle.connect("toggled", self._on_sort_toggled)
+        header_box.append(self._sort_toggle)
 
         archive_toggle = Gtk.CheckButton(label="Tampilkan arsip")
         archive_toggle.connect("toggled", self._on_archive_toggled)
@@ -81,6 +89,10 @@ class ManagePage(Gtk.Box):
 
     def _on_archive_toggled(self, button: Gtk.CheckButton) -> None:
         self._show_archived = button.get_active()
+        self.refresh()
+
+    def _on_sort_toggled(self, button: Gtk.ToggleButton) -> None:
+        self._sort_mode = button.get_active()
         self.refresh()
 
     # -- daftar ----------------------------------------------------------
@@ -149,7 +161,9 @@ class ManagePage(Gtk.Box):
         row = Adw.ActionRow(title=worship.name)
         row.set_subtitle(self._subtitle(worship))
 
-        if worship.archived_on is None:
+        # Tombol naik/turun hanya muncul saat mode urutkan aktif supaya baris
+        # tidak penuh ikon. Di luar mode itu, semuanya ada di menu ⋮.
+        if self._sort_mode and worship.archived_on is None:
             index = active_ids.index(worship.id)
             if index > 0:
                 row.add_suffix(
@@ -175,32 +189,82 @@ class ManagePage(Gtk.Box):
                 lambda *_: self._on_add_worship(worship.id),
             )
         )
+        row.add_suffix(self._row_menu(worship, active_ids))
+        return row
+
+    def _row_menu(
+        self, worship: WorshipRecord, active_ids: list[int]
+    ) -> Gtk.MenuButton:
+        """Menu aksi per baris: urutkan, arsipkan, dan hapus permanen."""
+
+        popover = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        box.set_margin_top(6)
+        box.set_margin_bottom(6)
+        box.set_margin_start(6)
+        box.set_margin_end(6)
 
         if worship.archived_on is None:
-            row.add_suffix(
-                self._icon_button(
-                    "view-reveal-symbolic",
-                    f"Arsipkan {worship.name}",
-                    lambda *_: self._archive(worship),
+            index = active_ids.index(worship.id)
+            if index > 0:
+                box.append(
+                    self._menu_action(
+                        "Naikkan",
+                        lambda: self._move(worship.id, -1),
+                    )
+                )
+            if index < len(active_ids) - 1:
+                box.append(
+                    self._menu_action(
+                        "Turunkan",
+                        lambda: self._move(worship.id, 1),
+                    )
+                )
+            if index > 0 or index < len(active_ids) - 1:
+                box.append(Gtk.Separator())
+            box.append(
+                self._menu_action(
+                    "Arsipkan",
+                    lambda: self._archive(worship),
                 )
             )
         else:
-            row.add_suffix(
-                self._icon_button(
-                    "edit-undo-symbolic",
-                    f"Pulihkan {worship.name}",
-                    lambda *_: self._restore(worship),
+            box.append(
+                self._menu_action(
+                    "Pulihkan",
+                    lambda: self._restore(worship),
                 )
             )
 
-        row.add_suffix(
-            self._icon_button(
-                "user-trash-symbolic",
-                f"Hapus permanen {worship.name}",
-                lambda *_: self._confirm_delete(worship),
+        box.append(Gtk.Separator())
+        box.append(
+            self._menu_action(
+                "Hapus permanen",
+                lambda: self._confirm_delete(worship),
+                danger=True,
             )
         )
-        return row
+        popover.set_child(box)
+
+        button = Gtk.MenuButton()
+        button.set_icon_name("view-more-symbolic")
+        button.set_tooltip_text(f"Aksi lain untuk {worship.name}")
+        set_accessible_label(button, f"Aksi lain untuk {worship.name}")
+        button.add_css_class("flat")
+        button.set_popover(popover)
+        return button
+
+    @staticmethod
+    def _menu_action(
+        label: str, callback: Callable, *, danger: bool = False
+    ) -> Gtk.Button:
+        button = Gtk.Button(label=label)
+        button.set_halign(Gtk.Align.FILL)
+        button.add_css_class("flat")
+        if danger:
+            button.add_css_class("ih-danger")
+        button.connect("clicked", lambda *_: callback())
+        return button
 
     @staticmethod
     def _icon_button(icon: str, label: str, callback: Callable) -> Gtk.Button:
@@ -208,6 +272,7 @@ class ManagePage(Gtk.Box):
         button.set_tooltip_text(label)
         set_accessible_label(button, label)
         button.add_css_class("flat")
+        button.add_css_class("ih-icon-button")
         button.connect("clicked", callback)
         return button
 

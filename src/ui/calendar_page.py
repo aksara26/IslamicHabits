@@ -174,11 +174,21 @@ class CalendarPage(Gtk.Box):
             self._on_open_settings()
 
     def _build_content(self) -> None:
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_start(18)
-        box.set_margin_end(18)
-        box.set_margin_top(6)
-        box.set_margin_bottom(18)
+        # Dua panel di layar lebar: kalender di kiri dan detail hari di kanan.
+        # Dengan begitu memilih tanggal tidak mendorong detail ke bawah.
+        paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        paned.set_vexpand(True)
+        paned.set_position(520)
+        paned.set_resize_start_child(False)
+        paned.set_resize_end_child(True)
+        paned.set_shrink_start_child(True)
+        paned.set_shrink_end_child(True)
+
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        left.set_margin_start(18)
+        left.set_margin_end(12)
+        left.set_margin_top(6)
+        left.set_margin_bottom(18)
 
         self._month_grid = Gtk.Grid()
         self._month_grid.set_column_spacing(4)
@@ -186,31 +196,52 @@ class CalendarPage(Gtk.Box):
         self._month_grid.set_column_homogeneous(True)
         self._month_grid.set_halign(Gtk.Align.FILL)
         self._month_grid.add_css_class("ih-calendar-grid")
-        box.append(self._month_grid)
+        left.append(self._month_grid)
+
+        month_title = Gtk.Label(label="Ringkasan per kegiatan")
+        month_title.set_xalign(0)
+        month_title.add_css_class("ih-section-title")
+        left.append(month_title)
+
+        self._month_summary = Gtk.ListBox()
+        self._month_summary.add_css_class("boxed-list")
+        self._month_summary.set_selection_mode(Gtk.SelectionMode.NONE)
+        left.append(self._month_summary)
+
+        left_scrolled = Gtk.ScrolledWindow(vexpand=True)
+        left_scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        left_scrolled.set_min_content_width(320)
+        left_scrolled.set_child(left)
+
+        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        right.set_margin_start(12)
+        right.set_margin_end(18)
+        right.set_margin_top(6)
+        right.set_margin_bottom(18)
 
         detail_title = Gtk.Label(label="Detail hari terpilih")
         detail_title.set_xalign(0)
         detail_title.add_css_class("ih-section-title")
-        box.append(detail_title)
+        right.append(detail_title)
 
         self._calendar_detail_state = Gtk.Label(label="")
         self._calendar_detail_state.set_xalign(0)
         self._calendar_detail_state.set_wrap(True)
-        box.append(self._calendar_detail_state)
+        right.append(self._calendar_detail_state)
 
         self._calendar_detail_list = Gtk.ListBox()
         self._calendar_detail_list.add_css_class("boxed-list")
         self._calendar_detail_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        box.append(self._calendar_detail_list)
+        right.append(self._calendar_detail_list)
 
         self._calendar_detail_note = Gtk.Label(label="")
         self._calendar_detail_note.set_xalign(0)
         self._calendar_detail_note.set_wrap(True)
         self._calendar_detail_note.add_css_class("dim-label")
-        box.append(self._calendar_detail_note)
+        right.append(self._calendar_detail_note)
 
         actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        open_selected = Gtk.Button(label="Isi hari ini di Hari Ini")
+        open_selected = Gtk.Button(label="Buka hari di Hari Ini")
         open_selected.connect(
             "clicked", lambda *_: self._on_open_day(self._calendar_selected)
         )
@@ -221,22 +252,15 @@ class CalendarPage(Gtk.Box):
         open_memo.set_sensitive(self._on_open_memo is not None)
         open_memo.connect("clicked", self._on_open_memo_clicked)
         actions.append(open_memo)
-        box.append(actions)
+        right.append(actions)
 
-        month_title = Gtk.Label(label="Ringkasan per kegiatan")
-        month_title.set_xalign(0)
-        month_title.add_css_class("ih-section-title")
-        box.append(month_title)
+        right_scrolled = Gtk.ScrolledWindow(vexpand=True)
+        right_scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        right_scrolled.set_child(right)
 
-        self._month_summary = Gtk.ListBox()
-        self._month_summary.add_css_class("boxed-list")
-        self._month_summary.set_selection_mode(Gtk.SelectionMode.NONE)
-        box.append(self._month_summary)
-
-        scrolled = Gtk.ScrolledWindow(vexpand=True)
-        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_child(box)
-        self.append(scrolled)
+        paned.set_start_child(left_scrolled)
+        paned.set_end_child(right_scrolled)
+        self.append(paned)
 
     # -- data ------------------------------------------------------------
 

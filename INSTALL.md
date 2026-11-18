@@ -201,20 +201,23 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
    kebiasaan dengan kategori **Kebiasaan**; pintasannya `Ctrl+Shift+N`.
 4. Isi **Pengaturan** bila ingin tema tertentu (**Hijau** default, **Putih**,
    atau **Hitam**), pengingat harian, popup pemberitahuan, atau folder cadangan.
-5. Sidebar memiliki delapan menu terpisah: **Hari Ini**, **Riwayat**,
-   **Kalender**, **Histori Catatan**, **Memo**, **Muhasabah**, **Kelola Ibadah**,
-   dan **Pengaturan**. Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender,
-   `Ctrl+3` Riwayat tahunan, `Ctrl+4` Histori Catatan, `Ctrl+5` Memo, dan
+5. Sidebar memiliki tujuh menu terpisah: **Hari Ini**, **Riwayat**,
+   **Kalender**, **Memo**, **Muhasabah**, **Kelola Ibadah**, dan
+   **Pengaturan**. Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender,
+   `Ctrl+3` Riwayat tahunan, `Ctrl+4` Muhasabah, `Ctrl+5` Memo, dan
    `Ctrl+Shift+N` kebiasaan baru.
 6. Halaman **Riwayat** memuat tiga tren garis: 30 hari terakhir, per hari dalam
    satu bulan, dan per bulan dalam satu tahun. Klik titik tren harian untuk
    membuka tanggal itu; klik titik tren tahunan untuk membuka Kalender.
 7. Halaman **Memo** (`Ctrl+5`) menyimpan teks memo harian dan lampiran foto
    (JPG, PNG, WEBP, GIF; maksimal 25 MB per berkas). Teks tersimpan otomatis,
-   foto disalin ke folder `memo/` di folder data. Kartu **Memo harian** di bawah
+   tombol **Simpan** dan `Ctrl+S` menyimpan segera, dan foto disalin ke folder
+   `memo/` di folder data. Tombol **Memo sebelumnya** membuka daftar memo lama
+   dengan pencarian, cuplikan, dan jumlah foto. Kartu **Memo harian** di atas
    daftar **Hari Ini** menautkan ke halaman ini.
-8. `Ctrl+F` memfokuskan pencarian catatan harian bila **Histori Catatan** sedang
-   aktif; di halaman lain pintasan ini membuka pencarian muhasabah.
+8. `Ctrl+F` membuka **pencarian global** untuk memo, muhasabah, catatan ibadah,
+   dan nama ibadah; memilih hasil langsung membuka halaman dan tanggal yang
+   tepat.
 
 Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
 

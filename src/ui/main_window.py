@@ -49,7 +49,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._today_page = self._make_today_page()
         self._history_page = self._make_history_page()
         self._calendar_page = self._make_calendar_page()
-        self._note_history_page = self._make_note_history_page()
         self._memo_page = self._make_memo_page()
         self._muhasabah_page = self._make_muhasabah_page()
         self._manage_page = self._make_manage_page()
@@ -64,12 +63,6 @@ class MainWindow(Adw.ApplicationWindow):
             "calendar",
             "Kalender",
             "office-calendar-symbolic",
-        )
-        self._stack.add_titled_with_icon(
-            self._note_history_page,
-            "note-history",
-            "Histori Catatan",
-            "text-x-generic-symbolic",
         )
         self._stack.add_titled_with_icon(
             self._memo_page,
@@ -128,10 +121,22 @@ class MainWindow(Adw.ApplicationWindow):
         toggle.connect("clicked", self._on_toggle_sidebar)
         content_header.pack_start(toggle)
 
-        search_button = Gtk.Button.new_from_icon_name("system-search-symbolic")
-        search_button.set_tooltip_text("Cari catatan (Ctrl+F)")
-        set_accessible_label(search_button, "Cari catatan")
-        search_button.connect("clicked", lambda *_: self._on_search())
+        from .search_popover import SearchPopover
+
+        self._search_popover = SearchPopover(
+            self._repo,
+            on_open_memo=self._open_memo,
+            on_open_muhasabah=self._open_muhasabah_day,
+            on_open_day=self._open_day,
+            on_open_worship=lambda worship_id: self.open_worship_dialog(worship_id),
+        )
+        search_button = Gtk.MenuButton()
+        search_button.set_icon_name("system-search-symbolic")
+        search_button.set_popover(self._search_popover)
+        search_button.set_tooltip_text(
+            "Cari memo, muhasabah, dan catatan ibadah (Ctrl+F)"
+        )
+        set_accessible_label(search_button, "Cari semua catatan")
         content_header.pack_end(search_button)
         self._search_button = search_button
 
@@ -176,7 +181,6 @@ class MainWindow(Adw.ApplicationWindow):
             "history-month": lambda *_: self._go_calendar(),
             "history-year": lambda *_: self._go_history("year"),
             "go-calendar": lambda *_: self._go_calendar(),
-            "go-note-history": lambda *_: self.go_page("note-history"),
             "go-memo": lambda *_: self.go_page("memo"),
             "go-muhasabah": lambda *_: self.go_page("muhasabah"),
             "go-manage": lambda *_: self.go_page("manage"),
@@ -186,6 +190,7 @@ class MainWindow(Adw.ApplicationWindow):
             "today": lambda *_: self._go_to_today(self._today_page.go_today),
             "new-worship": lambda *_: self.open_worship_dialog(),
             "new-habit": lambda *_: self.open_habit_dialog(),
+            "save-memo": lambda *_: self._save_memo(),
             "undo": lambda *_: self.undo(),
             "shortcuts": lambda *_: self._show_shortcuts(),
             "search": lambda *_: self._on_search(),
@@ -227,16 +232,6 @@ class MainWindow(Adw.ApplicationWindow):
             on_toast=self._toast,
         )
 
-    def _make_note_history_page(self):
-        from .note_history_page import NoteHistoryPage
-
-        return NoteHistoryPage(
-            self._repo,
-            on_open_day=self._open_day,
-            on_open_memo=self._open_memo,
-            on_toast=self._toast,
-        )
-
     def _make_memo_page(self):
         from .memo_page import MemoPage
 
@@ -252,7 +247,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._today_page.refresh()
         self._history_page.refresh()
         self._calendar_page.refresh()
-        self._note_history_page.refresh()
 
     def _make_muhasabah_page(self):
         from .muhasabah_page import MuhasabahPage
@@ -311,16 +305,29 @@ class MainWindow(Adw.ApplicationWindow):
         self._memo_page.set_day(day)
 
     def _on_search(self) -> None:
-        if self._stack.get_visible_child_name() == "note-history":
-            self._note_history_page.focus_search()
-            return
+        """Buka pencarian global tanpa berpindah halaman lebih dulu."""
+
+        self._search_button.popup()
+        GLib.idle_add(self._search_popover.focus)
+
+    def _open_muhasabah_day(self, day: date) -> None:
         self.go_page("muhasabah")
-        self._muhasabah_page.focus_search()
+        self._muhasabah_page.set_day(day)
+
+    def _save_memo(self) -> None:
+        """Simpan memo hanya saat halamannya aktif.
+
+        Pintasan ``Ctrl+S`` terdaftar global, jadi tanpa penjagaan ini menekan
+        Ctrl+S di halaman lain akan menulis memo tanggal terakhir yang dibuka
+        dan menampilkan toast yang membingungkan.
+        """
+
+        if self._stack.get_visible_child_name() == "memo":
+            self._memo_page.save_now()
 
     def refresh_history(self) -> None:
         self._history_page.refresh()
         self._calendar_page.refresh()
-        self._note_history_page.refresh()
         self._memo_page.refresh()
 
     def refresh_today_and_history(self) -> None:
@@ -357,13 +364,10 @@ class MainWindow(Adw.ApplicationWindow):
         self._window_title.set_title(title)
         self._content_page.set_title(title)
 
-        hints = {
-            "note-history": ("Cari catatan harian (Ctrl+F)", "Cari catatan harian"),
-            "muhasabah": ("Cari muhasabah (Ctrl+F)", "Cari muhasabah"),
-        }
-        tooltip, label = hints.get(name, ("Cari catatan (Ctrl+F)", "Cari catatan"))
-        self._search_button.set_tooltip_text(tooltip)
-        set_accessible_label(self._search_button, label)
+        self._search_button.set_tooltip_text(
+            "Cari memo, muhasabah, dan catatan ibadah (Ctrl+F)"
+        )
+        set_accessible_label(self._search_button, "Cari semua catatan")
 
     def _go_to_today(self, action: Callable[[], None]) -> None:
         self.go_page("today")
@@ -549,17 +553,18 @@ class MainWindow(Adw.ApplicationWindow):
                     ("Riwayat (harian)", "<Ctrl>1"),
                     ("Kalender", "<Ctrl>2"),
                     ("Riwayat (tahunan)", "<Ctrl>3"),
-                    ("Histori Catatan", "<Ctrl>4"),
+                    ("Muhasabah", "<Ctrl>4"),
                     ("Memo", "<Ctrl>5"),
                 ),
             ),
             (
-                "Ibadah & kebiasaan",
+                "Ibadah & catatan",
                 (
                     ("Ibadah baru", "<Ctrl>N"),
                     ("Kebiasaan baru", "<Ctrl><Shift>N"),
+                    ("Simpan memo", "<Ctrl>S"),
                     ("Urungkan", "<Ctrl>Z"),
-                    ("Cari", "<Ctrl>F"),
+                    ("Cari semua catatan", "<Ctrl>F"),
                 ),
             ),
             (

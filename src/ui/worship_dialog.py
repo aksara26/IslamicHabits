@@ -17,11 +17,12 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, GLib, Gtk
 
 from ..logic.defaults import HABIT_CATEGORY
 from ..logic.repository import CategoryRecord, Repository, WorshipRecord
 from ..logic.statistics import EntryKind
+from .a11y import set_accessible_label
 
 __all__ = ["WorshipDialog"]
 
@@ -144,10 +145,18 @@ class WorshipDialog(Adw.Dialog):
         group.add(days_row)
 
         self._start_row = Adw.EntryRow(title="Mulai aktif (YYYY-MM-DD)")
+        self._start_row.set_tooltip_text("Tanggal mulai aktif, format YYYY-MM-DD")
+        pick_start = Gtk.Button.new_from_icon_name("x-office-calendar-symbolic")
+        pick_start.add_css_class("flat")
+        pick_start.set_tooltip_text("Pilih tanggal mulai dari kalender")
+        set_accessible_label(pick_start, "Pilih tanggal mulai")
+        pick_start.connect("clicked", self._on_pick_start)
+        self._start_row.add_suffix(pick_start)
         group.add(self._start_row)
 
         self._error = Gtk.Label(label="")
         self._error.add_css_class("ih-hint")
+        self._error.add_css_class("ih-danger")
         self._error.set_wrap(True)
         self._error.set_xalign(0)
 
@@ -261,6 +270,37 @@ class WorshipDialog(Adw.Dialog):
         is_number = KINDS[self._kind_row.get_selected()] is EntryKind.NUMBER
         self._target_row.set_visible(is_number)
         self._unit_row.set_visible(is_number)
+
+    def _on_pick_start(self, button: Gtk.Button) -> None:
+        """Buka kalender kecil dan isi tanggal mulai tanpa mengetik manual."""
+
+        try:
+            current = date.fromisoformat(self._start_row.get_text().strip())
+        except ValueError:
+            current = date.today()
+
+        popover = Gtk.Popover()
+        popover.set_parent(button)
+        popover.set_position(Gtk.PositionType.BOTTOM)
+        calendar = Gtk.Calendar()
+        calendar.select_day(
+            GLib.DateTime.new_local(
+                current.year, current.month, current.day, 0, 0, 0
+            )
+        )
+
+        def on_selected(widget: Gtk.Calendar) -> None:
+            value = widget.get_date()
+            self._start_row.set_text(
+                f"{value.get_year():04d}-{value.get_month():02d}-"
+                f"{value.get_day_of_month():02d}"
+            )
+            popover.popdown()
+
+        calendar.connect("day-selected", on_selected)
+        popover.set_child(calendar)
+        popover.connect("closed", lambda *_: popover.unparent())
+        popover.popup()
 
     # -- simpan ----------------------------------------------------------
 

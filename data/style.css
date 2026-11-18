@@ -308,6 +308,44 @@ button.ih-photo-remove:hover {
   font-weight: 700;
 }
 
+/* Label tanggal di navigasi bersama: seluruh area bisa diklik untuk membuka
+ * kalender, jadi hover perlu terlihat seperti tombol, bukan teks biasa. */
+.ih-date-button {
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+.ih-date-button:hover {
+  background-color: alpha(@ih-sage, 0.10);
+}
+
+/* Placeholder editor hanya petunjuk, bukan isi; warnanya lebih lembut dan
+ * tidak boleh menutupi klik ke area tulisan. */
+.ih-placeholder {
+  color: @ih-muted;
+  font-style: italic;
+}
+
+/* Tombol ikon kecil tetap punya target sentuh yang layak. */
+button.ih-icon-button,
+button.ih-photo-menu {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+/* Aksi destruktif memakai nada emas yang sudah lolos uji kontras, bukan merah
+ * mentah yang bertabrakan dengan palet sage. */
+.ih-danger {
+  color: @ih-gold;
+  font-weight: 600;
+}
+
+button.ih-danger:hover {
+  background-color: alpha(@ih-gold, 0.12);
+}
+
 /* Keadaan kosong pada galeri foto: bidang lembut, bukan area putih kosong. */
 .ih-empty {
   background-color: alpha(@ih-sage, 0.04);

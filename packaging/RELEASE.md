@@ -33,8 +33,26 @@ sementara toast dalam aplikasi tetap menjadi cadangan. Workflow mengunggah
 `install.sh`, `SHA256SUMS`, dan ikon SVG supaya pengguna bisa memasang atau
 memperbarui hanya dengan satu perintah `curl ... | bash` tanpa `sudo`.
 
+Rilis **v0.4.0** adalah rilis minor audit antarmuka; skema dan format ekspor
+tetap **v3**, jadi tidak ada migrasi basis data. Catatan rilis v0.4.0 harus
+menyebutkan:
+
+- navbar menjadi **tujuh menu**: Hari Ini, Riwayat, Kalender, Memo, Muhasabah,
+  Kelola Ibadah, dan Pengaturan. Histori Catatan tidak lagi menjadi halaman
+  navbar, tetapi kelas `NoteHistoryPage` dipertahankan agar kompatibel;
+- **Memo sebelumnya** menjadi dialog berikon `document-open-recent-symbolic`
+  dari halaman Memo, lengkap dengan pencarian, cuplikan teks, dan jumlah foto;
+- **pencarian global** (`Ctrl+F`) di bilah judul mencari memo, muhasabah,
+  catatan ibadah, dan nama ibadah, lalu membuka halaman yang tepat;
+- navigasi tanggal bersama dengan kalender popover dipakai Hari Ini, Memo, dan
+  Muhasabah; `Ctrl+4` kini membuka Muhasabah dan `Ctrl+S` menyimpan memo;
+- Kalender memakai dua panel, Kelola Ibadah memakai menu `⋮` dan mode
+  **Urutkan**, Riwayat memadatkan kontrolnya, dan **Hapus semua data** meminta
+  konfirmasi dengan mengetik `HAPUS` serta menawarkan ekspor lebih dulu.
+
 ### Riwayat rilis
 
+- **v0.4.0**: audit UX menyeluruh; navbar tujuh menu, pencarian global, dialog Memo sebelumnya, navigasi tanggal bersama, Kalender dua panel, menu aksi Kelola Ibadah, dan konfirmasi hapus dua langkah.
 - **v0.3.1**: perbaikan pemuatan tiga tema (Hijau, Putih, Hitam) pada instalasi `--user`, tata letak Memo yang lebih rapi dengan area tulisan berbeda, dan launcher desktop berjalur absolut.
 - **v0.2.0**: ibadah dan kebiasaan umum memakai satu tabel dan satu statistik; preset kebiasaan; tren garis harian, bulanan, dan tahunan; navbar tujuh menu.
 - **v0.1.0**: versi pertama dengan pencatatan harian, kelola ibadah, riwayat, kalender, histori catatan, muhasabah, pengaturan, serta ekspor/impor/cadangan.
@@ -73,7 +91,7 @@ lebih mandiri dan tetap disarankan untuk pengguna GNOME.
 
 ## 4. GitHub Releases
 
-1. Buat tag `v0.3.0` (sesuaikan nomor versi) dan push ke GitHub.
+1. Buat tag `v0.4.0` (sesuaikan nomor versi) dan push ke GitHub.
 2. Workflow `.github/workflows/build.yml` menjalankan tes (termasuk `bash -n
    packaging/install.sh`), membangun AppImage, lalu melampirkan AppImage,
    `install.sh`, `SHA256SUMS`, dan ikon SVG ke rilis tag.

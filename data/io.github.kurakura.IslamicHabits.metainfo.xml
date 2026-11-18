@@ -19,6 +19,19 @@
   </developer>
   <url type="homepage">https://github.com/aksara26/IslamicHabits</url>
   <releases>
+    <release version="0.4.0" date="2026-11-18">
+      <description>
+        <p>
+          Audit antarmuka menyeluruh: navbar dipadatkan menjadi tujuh menu,
+          pencarian global mencari memo, muhasabah, catatan ibadah, dan nama
+          ibadah sekaligus, serta halaman Memo mendapat dialog Memo sebelumnya
+          dengan pencarian, cuplikan, dan jumlah foto. Navigasi tanggal kini
+          sama di Hari Ini, Memo, dan Muhasabah, Kalender memakai dua panel,
+          Kelola Ibadah menyimpan aksi lain di menu, dan hapus semua data
+          meminta konfirmasi dua langkah.
+        </p>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-11-18">
       <description>
         <p>

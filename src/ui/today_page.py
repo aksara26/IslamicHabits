@@ -24,31 +24,13 @@ from ..logic.statistics import (
     is_active,
 )
 from .a11y import set_accessible_label
+from .date_navigator import DateNavigator
 
 __all__ = ["TodayPage"]
 
-HARI = ("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
-BULAN = (
-    "Januari",
-    "Februari",
-    "Maret",
-    "April",
-    "Mei",
-    "Juni",
-    "Juli",
-    "Agustus",
-    "September",
-    "Oktober",
-    "November",
-    "Desember",
-)
 AddWorshipCallback = Callable[[], None]
 DataChangedCallback = Callable[[], None]
 OpenMemoCallback = Callable[[date], None]
-
-
-def _format_day(day: date) -> str:
-    return f"{HARI[day.weekday()]}, {day.day} {BULAN[day.month - 1]} {day.year}"
 
 
 class _EntryDialog(Adw.Dialog):
@@ -181,9 +163,13 @@ class TodayPage(Gtk.Box):
 
         summary_title = Gtk.Label(label="Ringkasan hari ini")
         summary_title.set_xalign(0)
+        summary_title.set_hexpand(True)
         summary_title.add_css_class("ih-section-title")
-        summary_box.append(summary_title)
-        summary_box.append(self._summary_label)
+        self._summary_label.set_valign(Gtk.Align.CENTER)
+        title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        title_row.append(summary_title)
+        title_row.append(self._summary_label)
+        summary_box.append(title_row)
         summary_box.append(self._progress)
 
         actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -199,6 +185,10 @@ class TodayPage(Gtk.Box):
         self.append(summary_box)
 
         self._content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # Memo adalah konteks hari, jadi kartunya tampil sebelum daftar
+        # kegiatan agar tidak tenggelam di bagian paling bawah halaman.
+        self._content_box.append(self._build_daily_note_card())
+
         list_title = Gtk.Label(label="Ibadah & kebiasaan")
         list_title.set_xalign(0)
         list_title.set_margin_start(18)
@@ -208,7 +198,6 @@ class TodayPage(Gtk.Box):
 
         self._list_holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self._content_box.append(self._list_holder)
-        self._content_box.append(self._build_daily_note_card())
 
         self._scrolled = Gtk.ScrolledWindow(vexpand=True)
         self._scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -222,42 +211,13 @@ class TodayPage(Gtk.Box):
     # -- konstruksi ------------------------------------------------------
 
     def _build_navigation(self) -> None:
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.set_margin_start(12)
-        box.set_margin_end(12)
-        box.set_margin_top(12)
-
-        previous = Gtk.Button.new_from_icon_name("go-previous-symbolic")
-        previous.set_tooltip_text("Hari sebelumnya (Ctrl+←)")
-        set_accessible_label(previous, "Hari sebelumnya")
-        previous.connect("clicked", lambda *_: self.go_previous_day())
-        box.append(previous)
-
-        self._date_label = Gtk.Label(label="")
-        self._date_label.set_hexpand(True)
-        self._date_label.set_xalign(0.5)
-        box.append(self._date_label)
-
-        today = Gtk.Button(label="Hari ini")
-        today.set_tooltip_text("Kembali ke hari ini (Ctrl+T)")
-        set_accessible_label(today, "Kembali ke hari ini")
-        today.connect("clicked", lambda *_: self.go_today())
-        box.append(today)
-
-        following = Gtk.Button.new_from_icon_name("go-next-symbolic")
-        following.set_tooltip_text("Hari berikutnya (Ctrl+→)")
-        set_accessible_label(following, "Hari berikutnya")
-        following.connect("clicked", lambda *_: self.go_next_day())
-        box.append(following)
-
-        self._context_label = Gtk.Label(label="")
-        self._context_label.set_xalign(0.5)
-        self._context_label.add_css_class("dim-label")
-
-        wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        wrapper.append(box)
-        wrapper.append(self._context_label)
-        self.append(wrapper)
+        self._nav = DateNavigator(
+            on_previous=self.go_previous_day,
+            on_next=self.go_next_day,
+            on_today=self.go_today,
+            on_pick=self.set_day,
+        )
+        self.append(self._nav)
 
     def _build_day_change_notice(self) -> None:
         notice = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -281,8 +241,8 @@ class TodayPage(Gtk.Box):
         card.add_css_class("ih-card")
         card.set_margin_start(18)
         card.set_margin_end(18)
-        card.set_margin_top(12)
-        card.set_margin_bottom(18)
+        card.set_margin_top(6)
+        card.set_margin_bottom(6)
 
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         title = Gtk.Label(label="Memo harian")
@@ -372,16 +332,16 @@ class TodayPage(Gtk.Box):
             widget = child
         return None
 
-    def refresh(self) -> None:
-        focused_id = self._focused_worship_id()
-        self._load_note()
-        self._date_label.set_label(_format_day(self.day))
-        if self.day > date.today():
-            self._context_label.set_label("Hari depan — pencatatan dibatasi")
-        elif self.day < date.today():
-            self._context_label.set_label("Mengisi hari lampau")
-        else:
-            self._context_label.set_label("")
+    @staticmethod
+    def _context_for(day: date) -> str:
+        if day > date.today():
+            return "Hari depan — pencatatan dibatasi"
+        if day < date.today():
+            return "Mengisi hari lampau"
+        return ""
+
+    def _refresh_summary(self) -> None:
+        """Perbarui ringkasan saja tanpa membangun ulang daftar kegiatan."""
 
         worships, entries = self._repo.statistics_inputs(start=self.day, end=self.day)
         summary = compute_daily(self.day, worships, entries)
@@ -392,7 +352,16 @@ class TodayPage(Gtk.Box):
             summary.completed / summary.expected if summary.expected else 0.0
         )
 
-        entry_map = {item.worship_id: item for item in self._repo.list_entries(start=self.day, end=self.day)}
+    def refresh(self) -> None:
+        focused_id = self._focused_worship_id()
+        self._load_note()
+        self._nav.set_day(self.day, context=self._context_for(self.day))
+        self._refresh_summary()
+
+        entry_map = {
+            item.worship_id: item
+            for item in self._repo.list_entries(start=self.day, end=self.day)
+        }
         active = [
             worship
             for worship in self._repo.list_worships()
@@ -481,11 +450,24 @@ class TodayPage(Gtk.Box):
     def _on_value_changed(self, worship_id: int, value) -> None:
         if self.day > date.today():
             return
+        previous = self._repo.get_entry(worship_id, self.day)
         if value is None:
             self._repo.delete_entry(worship_id, self.day)
+            entry = None
         else:
-            self._repo.set_entry(worship_id, self.day, value=value)
-        self.refresh()
+            # Pertahankan jam dan catatan yang sudah diisi lewat dialog detail;
+            # sebelumnya mengubah nilai akan menghapus keduanya.
+            entry = self._repo.set_entry(
+                worship_id,
+                self.day,
+                value=value,
+                time=None if previous is None else previous.time,
+                note="" if previous is None else previous.note,
+            )
+        row = self._rows.get(worship_id)
+        if row is not None:
+            row.refresh(entry)
+        self._refresh_summary()
         self._on_data_changed()
 
     def _on_details(self, worship: WorshipRecord) -> None:
@@ -497,10 +479,13 @@ class TodayPage(Gtk.Box):
             worship,
             self.day,
             entry,
-            on_changed=self._on_entry_details_changed,
+            on_changed=lambda: self._on_entry_details_changed(worship.id),
         )
         dialog.present(self)
 
-    def _on_entry_details_changed(self) -> None:
-        self.refresh()
+    def _on_entry_details_changed(self, worship_id: int) -> None:
+        row = self._rows.get(worship_id)
+        if row is not None:
+            row.refresh(self._repo.get_entry(worship_id, self.day))
+        self._refresh_summary()
         self._on_data_changed()

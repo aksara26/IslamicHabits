@@ -23,5 +23,5 @@ SETTING_MUHASABAH_PROMPTS = "pertanyaan_muhasabah"
 META_ONBOARDING_DONE = "pengenalan_selesai"
 META_LAST_BACKUP = "cadangan_terakhir"
 
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.4.0"
 REPOSITORY_URL = "https://github.com/aksara26/IslamicHabits"

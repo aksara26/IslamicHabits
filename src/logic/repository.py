@@ -27,6 +27,7 @@ __all__ = [
     "MuhasabahRecord",
     "DailyNoteRecord",
     "MemoPhotoRecord",
+    "SearchHit",
     "Repository",
     "EntryValue",
     "neutral_value",
@@ -145,6 +146,22 @@ class MemoPhotoRecord:
     file_name: str
     caption: str
     order: int
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    """Satu hasil pencarian lintas memo, muhasabah, catatan, dan ibadah.
+
+    ``kind`` bernilai ``memo``, ``muhasabah``, ``entry``, atau ``worship``.
+    Halaman yang membuka hasil menentukan sendiri judul dan ikon yang dipakai,
+    sehingga repository tetap bebas dari GTK.
+    """
+
+    kind: str
+    title: str
+    snippet: str
+    day: date | None = None
+    worship_id: int | None = None
 
 
 class Repository:
@@ -732,9 +749,124 @@ class Repository:
         self._db.commit()
         (self._photos_dir / row["berkas"]).unlink(missing_ok=True)
 
+    def update_memo_caption(
+        self, photo_id: int, caption: str
+    ) -> MemoPhotoRecord | None:
+        """Perbarui keterangan foto tanpa menyentuh berkas gambarnya."""
+
+        self._db.execute(
+            "UPDATE memo_foto SET keterangan = ? WHERE id = ?",
+            (caption.strip(), photo_id),
+        )
+        self._db.commit()
+        row = self._db.execute(
+            "SELECT id, tanggal, berkas, keterangan, urutan "
+            "FROM memo_foto WHERE id = ?",
+            (photo_id,),
+        ).fetchone()
+        return None if row is None else self._memo_photo_from_row(row)
+
     def photo_path(self, photo: MemoPhotoRecord | str) -> Path:
         name = photo.file_name if isinstance(photo, MemoPhotoRecord) else photo
         return self._photos_dir / name
+
+    # -- pencarian -------------------------------------------------------
+
+    @staticmethod
+    def _search_snippet(text: str, query: str, limit: int = 120) -> str:
+        """Padatkan teks dan potong di sekitar kata yang dicari."""
+
+        compact = " ".join(text.split())
+        if len(compact) <= limit:
+            return compact
+        position = compact.casefold().find(query.casefold())
+        start = max(0, position - 40) if position >= 0 else 0
+        end = min(len(compact), start + limit)
+        prefix = "…" if start > 0 else ""
+        suffix = "…" if end < len(compact) else ""
+        return f"{prefix}{compact[start:end].strip()}{suffix}"
+
+    def search_all(self, query: str, *, limit: int = 20) -> tuple[SearchHit, ...]:
+        """Cari memo, muhasabah, catatan ibadah, dan nama ibadah sekaligus.
+
+        Hasil dikelompokkan sesuai urutan pencarian supaya halaman pemanggil
+        bisa menampilkan judul bagian tanpa mengurutkan ulang. Query kurang
+        dari dua karakter diabaikan agar pencarian tidak membebani basis data.
+        """
+
+        text = query.strip()
+        if len(text) < 2:
+            return ()
+        pattern = f"%{text}%"
+        hits: list[SearchHit] = []
+
+        for row in self._db.execute(
+            "SELECT tanggal, teks FROM catatan_harian WHERE teks LIKE ? "
+            "ORDER BY tanggal DESC LIMIT ?",
+            (pattern, limit),
+        ).fetchall():
+            hits.append(
+                SearchHit(
+                    kind="memo",
+                    title="Memo harian",
+                    snippet=self._search_snippet(row["teks"], text),
+                    day=date.fromisoformat(row["tanggal"]),
+                )
+            )
+
+        for row in self._db.execute(
+            "SELECT tanggal, teks, jawaban FROM muhasabah "
+            "WHERE teks LIKE ? OR jawaban LIKE ? "
+            "ORDER BY tanggal DESC LIMIT ?",
+            (pattern, pattern, limit),
+        ).fetchall():
+            answers = row["jawaban"] or ""
+            source = (
+                row["teks"]
+                if text.casefold() in (row["teks"] or "").casefold()
+                else (answers or row["teks"])
+            )
+            hits.append(
+                SearchHit(
+                    kind="muhasabah",
+                    title="Muhasabah",
+                    snippet=self._search_snippet(source, text),
+                    day=date.fromisoformat(row["tanggal"]),
+                )
+            )
+
+        for row in self._db.execute(
+            "SELECT e.tanggal, e.catatan, i.id AS ibadah_id, i.nama "
+            "FROM catatan e JOIN ibadah i ON i.id = e.ibadah_id "
+            "WHERE e.catatan LIKE ? ORDER BY e.tanggal DESC LIMIT ?",
+            (pattern, limit),
+        ).fetchall():
+            hits.append(
+                SearchHit(
+                    kind="entry",
+                    title=row["nama"],
+                    snippet=self._search_snippet(row["catatan"], text),
+                    day=date.fromisoformat(row["tanggal"]),
+                    worship_id=int(row["ibadah_id"]),
+                )
+            )
+
+        for row in self._db.execute(
+            "SELECT i.id, i.nama, k.nama AS kategori FROM ibadah i "
+            "LEFT JOIN kategori k ON k.id = i.kategori_id "
+            "WHERE i.nama LIKE ? ORDER BY i.nama LIMIT ?",
+            (pattern, limit),
+        ).fetchall():
+            hits.append(
+                SearchHit(
+                    kind="worship",
+                    title=row["nama"],
+                    snippet=row["kategori"] or "Ibadah atau kebiasaan",
+                    worship_id=int(row["id"]),
+                )
+            )
+
+        return tuple(hits)
 
     def clear_all_data(self) -> None:
         """Hapus semua data pengguna, lalu kembalikan ibadah bawaan.

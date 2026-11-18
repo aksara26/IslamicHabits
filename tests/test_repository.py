@@ -233,6 +233,51 @@ class RepositoryTests(unittest.TestCase):
             self.assertFalse(path.exists())
             self.assertEqual(repo.list_memo_photos(DAY), ())
 
+    def test_update_memo_caption_keeps_the_photo_file(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
+            repo = Repository(self.connection, photos_dir=folder_path / "memo")
+            source = folder_path / "pagi.jpg"
+            source.write_bytes(b"\xff\xd8\xff" + b"x" * 32)
+            photo = repo.add_memo_photo(DAY, source, caption="Awal")
+
+            updated = repo.update_memo_caption(photo.id, "  Suasana baru  ")
+
+            self.assertIsNotNone(updated)
+            assert updated is not None
+            self.assertEqual(updated.caption, "Suasana baru")
+            self.assertTrue(repo.photo_path(updated).is_file())
+            self.assertIsNone(repo.update_memo_caption(9999, "tidak ada"))
+
+    def test_search_all_mencari_ke_semua_sumber(self) -> None:
+        worship = self.repo.add_worship(
+            name="Subuh",
+            category_id=self.sholat.id,
+            kind=EntryKind.CHECK,
+            active_from=date(2026, 11, 1),
+        )
+        self.repo.save_daily_note(DAY, "Syukur pagi ini")
+        self.repo.save_muhasabah(DAY, "Refleksi sabar", "Jawaban syukur")
+        self.repo.set_entry(worship.id, DAY, value=True, note="Tepat waktu")
+
+        self.assertEqual(self.repo.search_all("s"), ())
+
+        hits = self.repo.search_all("syukur")
+        self.assertEqual({hit.kind for hit in hits}, {"memo", "muhasabah"})
+        self.assertTrue(all(hit.day == DAY for hit in hits))
+
+        entry_hits = self.repo.search_all("tepat")
+        self.assertEqual(len(entry_hits), 1)
+        self.assertEqual(entry_hits[0].kind, "entry")
+        self.assertEqual(entry_hits[0].title, "Subuh")
+        self.assertEqual(entry_hits[0].worship_id, worship.id)
+
+        worship_hits = self.repo.search_all("sub")
+        self.assertEqual(worship_hits[0].kind, "worship")
+        self.assertEqual(worship_hits[0].worship_id, worship.id)
+
+        self.assertEqual(self.repo.search_all("tidak ada"), ())
+
 
 if __name__ == "__main__":
     unittest.main()

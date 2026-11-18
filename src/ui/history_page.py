@@ -90,11 +90,12 @@ class HistoryPage(Gtk.Box):
         group = Adw.ToggleGroup()
         for label, name in (
             ("Harian", "day"),
-            ("Bulanan", "month"),
+            ("Rincian bulan", "month"),
             ("Tahunan", "year"),
         ):
             group.add(Adw.Toggle(label=label, name=name))
         group.set_active_name("day")
+        group.set_tooltip_text("Simbol: ○ kosong · ◐ sebagian · ● penuh")
         group.connect("notify::active-name", self._on_mode_changed)
         self._toggle = group
 
@@ -104,10 +105,13 @@ class HistoryPage(Gtk.Box):
         toggle_row.append(group)
         self.append(toggle_row)
 
+        # Navigasi periode dan filter berbagi satu baris supaya halaman tidak
+        # menumpuk empat baris kontrol sebelum grafik pertama.
         nav = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         nav.set_margin_start(12)
         nav.set_margin_end(12)
         nav.set_margin_top(6)
+        nav.set_margin_bottom(6)
 
         self._previous = Gtk.Button.new_from_icon_name("go-previous-symbolic")
         self._previous.set_tooltip_text("Periode sebelumnya")
@@ -126,35 +130,23 @@ class HistoryPage(Gtk.Box):
         nav.append(self._next)
 
         self._period_button = Gtk.Button(label="Hari ini")
+        self._period_button.add_css_class("ih-quick")
         self._period_button.connect("clicked", lambda *_: self.go_current())
         nav.append(self._period_button)
-        self.append(nav)
-
-        filters = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        filters.set_margin_start(12)
-        filters.set_margin_end(12)
-        filters.set_margin_top(6)
-        filters.set_margin_bottom(6)
 
         self._filter_dropdown = Gtk.DropDown()
+        self._filter_dropdown.set_hexpand(False)
         self._filter_dropdown.connect("notify::selected", self._on_filter_changed)
-        filters.append(self._filter_dropdown)
+        nav.append(self._filter_dropdown)
 
-        archive = Gtk.CheckButton(label="Tampilkan arsip")
+        archive = Gtk.CheckButton(label="Arsip")
         archive.set_tooltip_text(
             "Sertakan ibadah dan kebiasaan yang sudah diarsipkan"
         )
         archive.connect("toggled", self._on_archive_toggled)
-        filters.append(archive)
+        nav.append(archive)
 
-        help_label = Gtk.Label(label="Simbol: ○ kosong · ◐ sebagian · ● penuh")
-        help_label.set_hexpand(True)
-        help_label.set_xalign(1)
-        help_label.set_wrap(True)
-        help_label.set_max_width_chars(24)
-        help_label.add_css_class("ih-hint")
-        filters.append(help_label)
-        self.append(filters)
+        self.append(nav)
 
     def _build_views(self) -> None:
         self._views = Gtk.Stack()

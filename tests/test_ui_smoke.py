@@ -11,7 +11,7 @@ try:
 
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
-    from gi.repository import Adw
+    from gi.repository import Adw, GLib
 
     GTK_TERSEDIA = True
 except Exception:  # pragma: no cover - bergantung pada lingkungan
@@ -26,10 +26,13 @@ if GTK_TERSEDIA:
     from src.logic.repository import Repository
     from src.logic.statistics import EntryKind
     from src.ui.calendar_page import CalendarPage
+    from src.ui.date_navigator import DateNavigator
     from src.ui.history_page import HistoryPage
+    from src.ui.memo_history import MemoHistoryDialog
     from src.ui.memo_page import MemoPage
     from src.ui.muhasabah_page import MuhasabahPage
     from src.ui.note_history_page import NoteHistoryPage
+    from src.ui.search_popover import SearchPopover
     from src.ui.settings_page import SettingsPage
     from src.ui.today_page import TodayPage
     from src.ui.trend_line import TrendLine
@@ -290,10 +293,134 @@ class UiSmokeTests(unittest.TestCase):
         self.assertEqual(memo._note_count.get_label(), "9 karakter")
         self.assertEqual(memo._note_status.get_label(), "Menyimpan…")
         memo._flush_note()
-        self.assertEqual(memo._note_status.get_label(), "Tersimpan otomatis")
+        self.assertTrue(memo._note_status.get_label().startswith("Tersimpan"))
+        self.assertNotEqual(memo._saved_at.get_label(), "")
+
+        # Penyegaran dari halaman lain tidak boleh menghapus status simpan.
+        saved_at = memo._saved_at.get_label()
+        memo.refresh()
+        self.assertEqual(memo._saved_at.get_label(), saved_at)
 
     def test_garis_tren_bisa_difokus(self) -> None:
         self.assertTrue(TrendLine().get_focusable())
+
+    def test_date_navigator_menampilkan_dan_memilih_tanggal(self) -> None:
+        picked: list[date] = []
+        navigator = DateNavigator(
+            on_previous=lambda: None,
+            on_next=lambda: None,
+            on_today=lambda: None,
+            on_pick=picked.append,
+        )
+        day = date(2026, 11, 18)
+        navigator.set_day(day, context="Mengisi memo hari lampau")
+        self.assertEqual(navigator._day, day)
+        self.assertIn("18 November 2026", navigator._date_label.get_label())
+        self.assertTrue(navigator._context_label.get_visible())
+        self.assertIn("Mengisi memo", navigator._context_label.get_label())
+
+        target = date(2026, 10, 2)
+        navigator._calendar.select_day(
+            GLib.DateTime.new_local(
+                target.year, target.month, target.day, 0, 0, 0
+            )
+        )
+        self.assertEqual(picked, [target])
+
+        # Memilih tanggal yang sama tidak memicu callback lagi.
+        navigator._day = target
+        navigator._on_calendar_day(navigator._calendar)
+        self.assertEqual(picked, [target])
+
+    def test_memo_sebelumnya_menampilkan_catatan_dan_membuka_tanggal(self) -> None:
+        older = date.today() - timedelta(days=2)
+        newer = date.today() - timedelta(days=1)
+        self.repo.save_daily_note(older, "Memo lama tentang syukur")
+        self.repo.save_daily_note(newer, "Memo kemarin")
+
+        opened: list[date] = []
+        dialog = MemoHistoryDialog(
+            self.repo,
+            current_day=date.today(),
+            on_open=opened.append,
+        )
+        self.assertEqual(len(dialog._visible), 2)
+        self.assertIn("2 memo", dialog._count_label.get_label())
+
+        dialog._search_entry.set_text("syukur")
+        self.assertEqual(len(dialog._visible), 1)
+        self.assertEqual(dialog._visible[0].day, older)
+
+        row = dialog._list.get_row_at_index(0)
+        self.assertIsNotNone(row)
+        dialog.close = lambda: None  # type: ignore[method-assign]
+        dialog._on_row_activated(dialog._list, row)
+        self.assertEqual(opened, [older])
+
+        dialog._search_entry.set_text("tidak ada")
+        self.assertEqual(dialog._visible, ())
+        self.assertIn("Tidak ada", dialog._count_label.get_label())
+
+    def test_pencarian_global_membuka_halaman_tujuan(self) -> None:
+        day = date.today() - timedelta(days=3)
+        self.repo.save_daily_note(day, "Rasa syukur yang dalam")
+        self.repo.save_muhasabah(day, "Belajar sabar")
+
+        memos: list[date] = []
+        reflections: list[date] = []
+        popover = SearchPopover(
+            self.repo,
+            on_open_memo=memos.append,
+            on_open_muhasabah=reflections.append,
+            on_open_day=lambda _day: None,
+            on_open_worship=lambda _id: None,
+        )
+
+        popover._entry.set_text("s")
+        popover._on_search_changed()
+        self.assertFalse(popover._scrolled.get_visible())
+
+        popover._entry.set_text("syukur")
+        popover._on_search_changed()
+        self.assertTrue(popover._scrolled.get_visible())
+        results = []
+        child = popover._results.get_first_child()
+        while child is not None:
+            results.append(child)
+            child = child.get_next_sibling()
+        # Satu judul bagian "Memo harian" dan satu baris hasil.
+        self.assertEqual(len(results), 2)
+        popover._activate(self.repo.search_all("syukur")[0])
+        self.assertEqual(memos, [day])
+
+        popover._entry.set_text("sabar")
+        popover._activate(self.repo.search_all("sabar")[0])
+        self.assertEqual(reflections, [day])
+
+    def test_hapus_semua_data_butuh_konfirmasi_ketik_hapus(self) -> None:
+        messages: list[str] = []
+        self.repo.save_daily_note(date.today(), "Jangan sampai hilang")
+
+        settings = SettingsPage(
+            self.repo,
+            on_theme_changed=lambda _theme: None,
+            on_toast=lambda message, _label, _callback: messages.append(message),
+            on_data_changed=lambda: None,
+            on_test_notification=lambda: None,
+        )
+
+        from gi.repository import Gtk
+
+        entry = Gtk.Entry()
+        entry.set_text("salah")
+        settings._on_delete_all_response(None, "delete", entry)
+        self.assertEqual(len(self.repo.list_daily_notes()), 1)
+        self.assertIn("Ketik HAPUS", messages[-1])
+
+        entry.set_text("HAPUS")
+        settings._on_delete_all_response(None, "delete", entry)
+        self.assertEqual(self.repo.list_daily_notes(), ())
+        self.assertIn("Data dihapus", messages[-1])
 
 
 if __name__ == "__main__":

@@ -524,25 +524,48 @@ class SettingsPage(Gtk.Box):
     # -- hapus semua -----------------------------------------------------
 
     def _confirm_delete_all(self, *_args: object) -> None:
+        """Konfirmasi dua langkah dengan jumlah data dan tawaran ekspor."""
+
+        worships = len(self._repo.list_worships(include_archived=True))
+        entries = len(self._repo.list_entries())
+        notes = len(self._repo.list_daily_notes())
+        photos = len(self._repo.list_memo_photos())
+        muhasabah = len(self._repo.list_muhasabah())
         dialog = Adw.AlertDialog(
             heading="Hapus semua data?",
             body=(
-                "Seluruh ibadah, kebiasaan, catatan kegiatan, catatan harian, "
-                "muhasabah, dan pengaturan akan dihapus, lalu data bawaan "
-                "dikembalikan. "
-                "Buat cadangan dulu bila perlu."
+                f"Akan dihapus: {worships} ibadah/kebiasaan, {entries} catatan "
+                f"kegiatan, {notes} memo, {photos} foto, dan {muhasabah} "
+                "muhasabah. Ibadah serta kebiasaan bawaan akan dikembalikan.\n\n"
+                "Ketik HAPUS untuk mengonfirmasi. Tindakan ini tidak bisa "
+                "diurungkan."
             ),
         )
+        entry = Gtk.Entry()
+        entry.set_placeholder_text("Ketik HAPUS")
+        entry.set_margin_top(6)
+        dialog.set_extra_child(entry)
         dialog.add_response("cancel", "Batal")
+        dialog.add_response("export", "Ekspor dulu")
         dialog.add_response("delete", "Hapus semua")
         dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_default_response("cancel")
         dialog.set_close_response("cancel")
-        dialog.connect("response", self._on_delete_all_response)
+        dialog.connect("response", self._on_delete_all_response, entry)
         dialog.present(self.get_root() or self)
 
-    def _on_delete_all_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
+    def _on_delete_all_response(
+        self, _dialog: Adw.AlertDialog, response: str, entry: Gtk.Entry
+    ) -> None:
+        if response == "export":
+            self._on_export()
+            return
         if response != "delete":
+            return
+        if entry.get_text().strip().upper() != "HAPUS":
+            self._on_toast(
+                "Ketik HAPUS untuk mengonfirmasi penghapusan", None, None
+            )
             return
         self._repo.clear_all_data()
         self._on_data_changed()

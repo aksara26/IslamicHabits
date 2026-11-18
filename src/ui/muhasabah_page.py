@@ -20,6 +20,7 @@ from gi.repository import Adw, GLib, Gtk
 from ..logic.constants import SETTING_MUHASABAH_PROMPTS
 from ..logic.repository import Repository
 from .a11y import set_accessible_label
+from .date_navigator import DateNavigator
 
 __all__ = ["MuhasabahPage", "DEFAULT_PROMPTS"]
 
@@ -120,26 +121,14 @@ class MuhasabahPage(Gtk.Box):
         box.set_margin_bottom(12)
         box.set_hexpand(True)
 
-        nav = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        previous = Gtk.Button.new_from_icon_name("go-previous-symbolic")
-        previous.set_tooltip_text("Hari sebelumnya")
-        previous.connect("clicked", lambda *_: self._shift_day(-1))
-        nav.append(previous)
-
-        self._date_label = Gtk.Label(label="")
-        self._date_label.set_hexpand(True)
-        self._date_label.set_xalign(0.5)
-        nav.append(self._date_label)
-
-        following = Gtk.Button.new_from_icon_name("go-next-symbolic")
-        following.set_tooltip_text("Hari berikutnya")
-        following.connect("clicked", lambda *_: self._shift_day(1))
-        nav.append(following)
-
-        today_button = Gtk.Button(label="Hari ini")
-        today_button.connect("clicked", lambda *_: self.go_today())
-        nav.append(today_button)
-        box.append(nav)
+        self._nav = DateNavigator(
+            on_previous=lambda: self._shift_day(-1),
+            on_next=lambda: self._shift_day(1),
+            on_today=self.go_today,
+            on_pick=self.set_day,
+            margin=0,
+        )
+        box.append(self._nav)
 
         self._save_status = Gtk.Label(label="Tersimpan otomatis")
         self._save_status.set_xalign(0)
@@ -304,7 +293,7 @@ class MuhasabahPage(Gtk.Box):
     def _load_day(self) -> None:
         self._loading = True
         record = self._repo.get_muhasabah(self._day)
-        self._date_label.set_label(_format_day(self._day))
+        self._nav.set_day(self._day)
         self._text_view.get_buffer().set_text(record.text)
         self._answers_view.get_buffer().set_text(record.answers)
         self._save_status.set_label("Tersimpan otomatis")
