@@ -5,6 +5,18 @@ IslamicHabits. Untuk daftar fitur, arsitektur, dan perilaku aplikasi, lihat
 [`README.md`](README.md). Bila Anda sedang menyiapkan paket rilis, lihat
 [`packaging/RELEASE.md`](packaging/RELEASE.md).
 
+### Pertanyaan cepat: apa yang sebenarnya terdownload?
+
+| Yang Anda lakukan | Yang terdownload | Aplikasi langsung jalan? |
+|---|---|---|
+| Menjalankan perintah installer di bagian 1 | Skrip `install.sh`, lalu skrip itu mengunduh AppImage, ikon, dan `SHA256SUMS` | **Ya.** AppImage terpasang otomatis di `~/.local` |
+| Mengunduh `IslamicHabits-x86_64.AppImage` dari halaman Releases | Satu file AppImage | **Ya.** Beri izin jalankan, lalu buka file tersebut |
+| `git clone https://github.com/aksara26/IslamicHabits.git` | Kode sumber, **bukan** aplikasi yang sudah jadi | **Belum.** Harus di-build/dipasang dulu, lihat bagian 3 |
+
+Jadi, **clone tidak otomatis memasang aplikasi**. Clone dipakai kalau Anda ingin
+mengubah kode. Kalau hanya ingin memakai aplikasinya, pakai installer satu
+perintah atau unduh AppImage dari Releases.
+
 ## 1. Cara tercepat: satu perintah
 
 Bila rilis sudah tersedia di GitHub Releases, pemasangan cukup satu baris:
@@ -61,6 +73,17 @@ meson setup builddir
 meson test -C builddir
 sudo meson install -C builddir
 ```
+
+Kalau tidak ingin memakai `sudo`, pasang ke folder pengguna saja:
+
+```bash
+meson configure builddir --prefix="$HOME/.local"
+meson install -C builddir
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Bila memakai jalur pengguna, lewati perintah `sudo ninja -C builddir uninstall`
+di bawah. Untuk mencopotnya, jalankan `ninja -C builddir uninstall` tanpa `sudo`.
 
 Jalankan dari menu aplikasi atau lewat terminal:
 

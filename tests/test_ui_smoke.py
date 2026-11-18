@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from datetime import date, timedelta
 
@@ -16,6 +17,10 @@ try:
 except Exception:  # pragma: no cover - bergantung pada lingkungan
     GTK_TERSEDIA = False
 
+# Adw.init() memerlukan sesi tampilan. CI tanpa X/Wayland akan melewati smoke
+# test GTK, sedangkan pengujian logika tetap berjalan.
+DISPLAY_TERSEDIA = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
 if GTK_TERSEDIA:
     from src.logic.database import connect
     from src.logic.repository import Repository
@@ -29,7 +34,10 @@ if GTK_TERSEDIA:
     from src.ui.trend_line import TrendLine
 
 
-@unittest.skipUnless(GTK_TERSEDIA, "GTK4/libadwaita tidak tersedia")
+@unittest.skipUnless(
+    GTK_TERSEDIA and DISPLAY_TERSEDIA,
+    "GTK4/libadwaita atau sesi tampilan tidak tersedia",
+)
 class UiSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
