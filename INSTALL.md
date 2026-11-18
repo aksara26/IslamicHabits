@@ -10,7 +10,7 @@ IslamicHabits. Untuk daftar fitur, arsitektur, dan perilaku aplikasi, lihat
 Bila rilis sudah tersedia di GitHub Releases, pemasangan cukup satu baris:
 
 ```bash
-curl -fsSL https://github.com/kurakura/IslamicHabits/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/aksara26/IslamicHabits/releases/latest/download/install.sh | bash
 ```
 
 Tidak perlu `sudo`. Script ini mengunduh AppImage dan ikon terbaru, memeriksa
@@ -55,7 +55,7 @@ sudo dnf install meson ninja-build python3 python3-gobject python3-cairo gtk4 li
 Dari folder proyek:
 
 ```bash
-git clone https://github.com/kurakura/IslamicHabits.git
+git clone https://github.com/aksara26/IslamicHabits.git
 cd IslamicHabits
 meson setup builddir
 meson test -C builddir

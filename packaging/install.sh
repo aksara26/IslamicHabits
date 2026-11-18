@@ -7,7 +7,7 @@ set -euo pipefail
 APP_ID="io.github.kurakura.IslamicHabits"
 APPIMAGE_NAME="IslamicHabits-x86_64.AppImage"
 ICON_NAME="$APP_ID.svg"
-BASE_URL="${ISLAMICHABITS_RELEASE_URL:-https://github.com/kurakura/IslamicHabits/releases/latest/download}"
+BASE_URL="${ISLAMICHABITS_RELEASE_URL:-https://github.com/aksara26/IslamicHabits/releases/latest/download}"
 
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
