@@ -1,0 +1,14 @@
+/* Override palet sage untuk tema gelap.
+ *
+ * Dimuat setelah style.css ketika Adw memakai skema gelap. Warna yang lebih
+ * terang dipilih supaya teks dan penanda status tetap terbaca di atas latar
+ * gelap; aturan kelas tidak diulang karena memakai nama warna yang sama.
+ */
+
+@define-color ih-sage #a8c5b2;
+@define-color ih-accent #8fb6a0;
+@define-color ih-surface #17241c;
+@define-color ih-ink #e6f0e8;
+@define-color ih-night #101b15;
+@define-color ih-done #87b99a;
+@define-color ih-pending #98a49b;

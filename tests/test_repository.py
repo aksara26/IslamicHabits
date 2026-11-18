@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date
+from datetime import date, timedelta
 
 from src.logic.database import connect
-from src.logic.repository import Repository
+from src.logic.repository import DailyNoteRecord, Repository
 from src.logic.statistics import EntryKind, StatusValue, compute_daily, compute_range
 
 DAY = date(2026, 11, 18)
@@ -161,6 +161,32 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(self.repo.get_setting("tema"), "gelap")
         self.repo.set_meta("cadangan_terakhir", DAY.isoformat())
         self.assertEqual(self.repo.get_meta("cadangan_terakhir"), DAY.isoformat())
+
+    def test_daily_notes_are_saved_listed_and_deleted(self) -> None:
+        self.assertEqual(self.repo.get_daily_note(DAY), DailyNoteRecord(DAY, ""))
+
+        self.repo.save_daily_note(DAY, "  Banyak membaca hari ini.  ")
+        self.assertEqual(
+            self.repo.get_daily_note(DAY),
+            DailyNoteRecord(DAY, "Banyak membaca hari ini."),
+        )
+
+        previous = DAY - timedelta(days=1)
+        self.repo.save_daily_note(previous, "Kemarin sempat qadha.")
+        notes = self.repo.list_daily_notes(
+            start=previous, end=DAY + timedelta(days=1)
+        )
+        self.assertEqual([item.day for item in notes], [DAY, previous])
+
+        self.repo.save_daily_note(DAY, "   ")
+        self.assertEqual(self.repo.get_daily_note(DAY).text, "")
+        self.repo.delete_daily_note(previous)
+        self.assertEqual(self.repo.list_daily_notes(), ())
+
+    def test_clear_all_data_removes_daily_notes(self) -> None:
+        self.repo.save_daily_note(DAY, "Catatan yang harus hilang.")
+        self.repo.clear_all_data()
+        self.assertEqual(self.repo.list_daily_notes(), ())
 
 
 if __name__ == "__main__":

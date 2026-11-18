@@ -12,7 +12,15 @@ from src.logic.constants import APP_ID, SCHEMA_VERSION
 from src.logic.database import connect, default_database_path, default_data_dir, initialize
 from src.logic.defaults import DEFAULT_CATEGORIES, DEFAULT_WORSHIPS
 
-TABLES = ("meta", "kategori", "ibadah", "catatan", "muhasabah", "pengaturan")
+TABLES = (
+    "meta",
+    "kategori",
+    "ibadah",
+    "catatan",
+    "muhasabah",
+    "catatan_harian",
+    "pengaturan",
+)
 
 
 class DatabaseTests(unittest.TestCase):
@@ -75,6 +83,38 @@ class DatabaseTests(unittest.TestCase):
         connection.commit()
         with self.assertRaises(RuntimeError):
             initialize(connection, seed=False)
+
+    def test_migration_from_schema_v1_creates_daily_notes(self) -> None:
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        self.addCleanup(connection.close)
+        connection.execute("CREATE TABLE meta (kunci TEXT PRIMARY KEY, nilai TEXT NOT NULL)")
+        connection.execute(
+            "INSERT INTO meta (kunci, nilai) VALUES ('schema_version', '1')"
+        )
+        connection.execute("CREATE TABLE warisan (nilai TEXT)")
+        connection.execute("INSERT INTO warisan (nilai) VALUES ('tetap ada')")
+        connection.commit()
+
+        initialize(connection, seed=False)
+
+        names = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        self.assertIn("catatan_harian", names)
+        self.assertEqual(
+            connection.execute(
+                "SELECT nilai FROM meta WHERE kunci = 'schema_version'"
+            ).fetchone()["nilai"],
+            str(SCHEMA_VERSION),
+        )
+        self.assertEqual(
+            connection.execute("SELECT nilai FROM warisan").fetchone()["nilai"],
+            "tetap ada",
+        )
 
     def test_database_file_is_created_in_requested_directory(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

@@ -70,6 +70,7 @@ install_data(
 )
 install_data(
   'data/style.css',
+  'data/style-dark.css',
   install_dir: join_paths(datadir, app_id),
 )
 

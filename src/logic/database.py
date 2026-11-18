@@ -69,6 +69,11 @@ CREATE TABLE IF NOT EXISTS muhasabah (
     jawaban TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS catatan_harian (
+    tanggal TEXT PRIMARY KEY,
+    teks TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS pengaturan (
     kunci TEXT PRIMARY KEY,
     nilai TEXT NOT NULL
@@ -78,8 +83,16 @@ CREATE INDEX IF NOT EXISTS idx_catatan_tanggal ON catatan(tanggal);
 CREATE INDEX IF NOT EXISTS idx_ibadah_kategori ON ibadah(kategori_id, urutan);
 """
 
-# Ditambah satu entri per versi skema baru. Versi 1 dibuat oleh SCHEMA_SQL.
-MIGRATIONS: dict[int, str] = {}
+# Ditambah satu entri per versi skema baru. Versi 1 dibuat oleh skema awal;
+# versi 2 menambahkan catatan harian.
+MIGRATIONS: dict[int, str] = {
+    2: """
+    CREATE TABLE IF NOT EXISTS catatan_harian (
+        tanggal TEXT PRIMARY KEY,
+        teks TEXT NOT NULL DEFAULT ''
+    );
+    """,
+}
 
 
 def default_data_dir() -> Path:

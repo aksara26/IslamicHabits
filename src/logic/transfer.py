@@ -43,7 +43,15 @@ __all__ = [
     "maybe_backup",
 ]
 
-TABLES = ("kategori", "ibadah", "catatan", "muhasabah", "pengaturan", "meta")
+TABLES = (
+    "kategori",
+    "ibadah",
+    "catatan",
+    "muhasabah",
+    "catatan_harian",
+    "pengaturan",
+    "meta",
+)
 
 COLUMNS: dict[str, tuple[str, ...]] = {
     "kategori": ("id", "nama", "urutan", "lipat"),
@@ -69,6 +77,7 @@ COLUMNS: dict[str, tuple[str, ...]] = {
         "catatan",
     ),
     "muhasabah": ("tanggal", "teks", "jawaban"),
+    "catatan_harian": ("tanggal", "teks"),
     "pengaturan": ("kunci", "nilai"),
     "meta": ("kunci", "nilai"),
 }
@@ -78,12 +87,21 @@ PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "ibadah": ("id",),
     "catatan": ("ibadah_id", "tanggal"),
     "muhasabah": ("tanggal",),
+    "catatan_harian": ("tanggal",),
     "pengaturan": ("kunci",),
     "meta": ("kunci",),
 }
 
 # Urutan insert harus menghormati foreign key.
-INSERT_ORDER = ("kategori", "ibadah", "catatan", "muhasabah", "pengaturan", "meta")
+INSERT_ORDER = (
+    "kategori",
+    "ibadah",
+    "catatan",
+    "muhasabah",
+    "catatan_harian",
+    "pengaturan",
+    "meta",
+)
 DELETE_ORDER = tuple(reversed(INSERT_ORDER))
 
 
@@ -294,6 +312,12 @@ def validate_payload(payload: Any) -> None:
         _check_text(row["teks"], "muhasabah.teks")
         _check_text(row["jawaban"], "muhasabah.jawaban")
 
+    # Berkas ekspor versi lama tidak memiliki catatan harian; perlakukan
+    # sebagai tabel kosong agar data lama tetap bisa diimpor.
+    for row in data.get("catatan_harian", []):
+        _check_date(row["tanggal"], "tanggal")
+        _check_text(row["teks"], "catatan_harian.teks")
+
     for table in ("pengaturan", "meta"):
         for row in data[table]:
             _check_text(row["nilai"], f"{table}.nilai")
@@ -311,7 +335,7 @@ def describe_import(repository: Repository, payload: dict[str, Any]) -> ImportPr
     new: dict[str, int] = {}
     conflicts: dict[str, int] = {}
     for table in TABLES:
-        rows = payload["data"][table]
+        rows = payload["data"].get(table, [])
         counts[table] = len(rows)
         existing = {
             tuple(row[column] for column in PRIMARY_KEYS[table])
@@ -349,7 +373,7 @@ def import_payload(
                 deleted[table] = cursor.rowcount
 
         for table in INSERT_ORDER:
-            rows = payload["data"][table]
+            rows = payload["data"].get(table, [])
             columns = COLUMNS[table]
             placeholders = ", ".join("?" for _ in columns)
             sql = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"

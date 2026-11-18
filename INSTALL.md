@@ -146,12 +146,27 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
    tersedia di **Hari Ini**.
 3. Sesuaikan daftar di **Kelola Ibadah**: tambah, ubah, urutkan, atau arsipkan.
    Arsip tidak menghapus riwayat.
-4. Isi **Pengaturan** bila ingin tema tertentu, pengingat harian, atau folder
-   cadangan.
-5. Gunakan `Ctrl+1` / `Ctrl+2` / `Ctrl+3` untuk membuka Riwayat harian, bulanan,
-   dan tahunan.
+4. Isi **Pengaturan** bila ingin tema tertentu (palet sage terang/gelap),
+   pengingat harian, popup pemberitahuan, atau folder cadangan.
+5. Gunakan `Ctrl+1` / `Ctrl+2` / `Ctrl+3` untuk membuka Riwayat harian,
+   Kalender, dan tahunan.
+6. Di bawah daftar **Hari Ini** tersedia kartu **Catatan harian** yang tersimpan
+   otomatis. Catatan yang sama tampil pada detail hari di Riwayat dan Kalender.
 
 Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
+
+### Izin notifikasi
+
+Pengingat hanya berjalan saat aplikasi terbuka. Bila **Pengaturan → Pengingat →
+Popup pemberitahuan** aktif (default), aplikasi mengirim notifikasi desktop
+lewat GNOME. Tombol **Uji notifikasi** mengirim satu popup contoh:
+
+- Jika popup tidak muncul, periksa **Pengaturan Sistem → Notifikasi** dan
+  pastikan `IslamicHabits` diizinkan.
+- Toast di dalam aplikasi tetap muncul walaupun izin popup ditolak.
+- Klik popup akan membuka halaman Muhasabah pada hari ini.
+- Versi Flatpak memakai ID `io.github.kurakura.IslamicHabits` dalam pengaturan
+  notifikasi sistem.
 
 ## 6. Lokasi data dan pencopotan
 

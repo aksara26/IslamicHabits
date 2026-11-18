@@ -22,6 +22,7 @@ __all__ = [
     "WorshipRecord",
     "EntryRecord",
     "MuhasabahRecord",
+    "DailyNoteRecord",
     "Repository",
     "EntryValue",
     "neutral_value",
@@ -116,6 +117,14 @@ class MuhasabahRecord:
     day: date
     text: str
     answers: str
+
+
+@dataclass(frozen=True)
+class DailyNoteRecord:
+    """Catatan bebas untuk satu tanggal, berbeda dari catatan per ibadah."""
+
+    day: date
+    text: str
 
 
 class Repository:
@@ -523,6 +532,72 @@ class Repository:
         )
         self._db.commit()
 
+    # -- catatan harian ---------------------------------------------------
+
+    def get_daily_note(self, day: date | str) -> DailyNoteRecord:
+        row = self._db.execute(
+            "SELECT tanggal, teks FROM catatan_harian WHERE tanggal = ?",
+            (_to_iso(day),),
+        ).fetchone()
+        if row is None:
+            return DailyNoteRecord(
+                day=date.fromisoformat(_to_iso(day)),  # type: ignore[arg-type]
+                text="",
+            )
+        return DailyNoteRecord(
+            day=date.fromisoformat(row["tanggal"]), text=row["teks"]
+        )
+
+    def list_daily_notes(
+        self,
+        *,
+        start: date | str | None = None,
+        end: date | str | None = None,
+    ) -> tuple[DailyNoteRecord, ...]:
+        conditions: list[str] = []
+        params: list[Any] = []
+        if start is not None:
+            conditions.append("tanggal >= ?")
+            params.append(_to_iso(start))
+        if end is not None:
+            conditions.append("tanggal <= ?")
+            params.append(_to_iso(end))
+        where = " WHERE " + " AND ".join(conditions) if conditions else ""
+        rows = self._db.execute(
+            "SELECT tanggal, teks FROM catatan_harian"
+            + where
+            + " ORDER BY tanggal DESC",
+            params,
+        ).fetchall()
+        return tuple(
+            DailyNoteRecord(
+                day=date.fromisoformat(row["tanggal"]), text=row["teks"]
+            )
+            for row in rows
+        )
+
+    def save_daily_note(self, day: date | str, text: str) -> None:
+        """Simpan catatan bebas satu tanggal; baris kosong dihapus."""
+
+        clean = text.strip()
+        if not clean:
+            self.delete_daily_note(day)
+            return
+        self._db.execute(
+            """
+            INSERT INTO catatan_harian (tanggal, teks) VALUES (?, ?)
+            ON CONFLICT(tanggal) DO UPDATE SET teks = excluded.teks
+            """,
+            (_to_iso(day), clean),
+        )
+        self._db.commit()
+
+    def delete_daily_note(self, day: date | str) -> None:
+        self._db.execute(
+            "DELETE FROM catatan_harian WHERE tanggal = ?", (_to_iso(day),)
+        )
+        self._db.commit()
+
     def clear_all_data(self) -> None:
         """Hapus semua data pengguna, lalu kembalikan ibadah bawaan.
 
@@ -530,7 +605,15 @@ class Repository:
         data awal dibuat ulang supaya aplikasi tetap bisa dipakai.
         """
 
-        for table in ("catatan", "muhasabah", "ibadah", "kategori", "pengaturan", "meta"):
+        for table in (
+            "catatan",
+            "muhasabah",
+            "catatan_harian",
+            "ibadah",
+            "kategori",
+            "pengaturan",
+            "meta",
+        ):
             self._db.execute(f"DELETE FROM {table}")
         self._db.commit()
         initialize(self._db, seed=True)

@@ -16,6 +16,7 @@ from ..logic.constants import (
     APP_NAME,
     META_ONBOARDING_DONE,
     SETTING_REMINDER_ENABLED,
+    SETTING_REMINDER_POPUP,
     SETTING_REMINDER_TIME,
     SETTING_THEME,
 )
@@ -198,6 +199,7 @@ class MainWindow(Adw.ApplicationWindow):
             on_theme_changed=apply_theme,
             on_toast=self._toast,
             on_data_changed=self.refresh_all,
+            on_test_notification=self._send_test_notification,
         )
 
     # -- navigasi --------------------------------------------------------
@@ -340,14 +342,44 @@ class MainWindow(Adw.ApplicationWindow):
         now = datetime.now()
         if now.strftime("%H:%M") >= target and self._reminder_day != now.date():
             self._reminder_day = now.date()
+            if self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1":
+                self._send_notification(
+                    "IslamicHabits",
+                    "Waktunya mencatat ibadah dan menulis catatan hari ini.",
+                )
             self._toast(
                 "Waktunya mencatat ibadah dan menulis muhasabah.",
                 "Buka Muhasabah",
-                self._open_muhasabah_today,
+                self.open_muhasabah_today,
             )
         return True
 
-    def _open_muhasabah_today(self) -> None:
+    def _send_notification(self, title: str, body: str) -> None:
+        """Kirim popup notifikasi desktop; aman bila aplikasi belum terdaftar."""
+
+        application = self.get_application()
+        if application is None:
+            return
+        notification = Gio.Notification.new(title)
+        notification.set_body(body)
+        notification.set_priority(Gio.NotificationPriority.NORMAL)
+        notification.set_default_action("app.open-muhasabah")
+        try:
+            application.send_notification("islamichabits-reminder", notification)
+        except Exception:
+            # Notifikasi tidak boleh menghalangi pencatatan bila desktop
+            # menolaknya atau belum memberikan izin.
+            pass
+
+    def _send_test_notification(self, *_args: object) -> None:
+        self._send_notification(
+            "IslamicHabits", "Ini contoh popup pemberitahuan IslamicHabits."
+        )
+        self._toast("Notifikasi uji dikirim", None, None)
+
+    def open_muhasabah_today(self) -> None:
+        """Buka Muhasabah pada hari ini, dipakai toast dan notifikasi."""
+
         self._muhasabah_page.go_today()
         self.go_page("muhasabah")
 
@@ -361,7 +393,7 @@ class MainWindow(Adw.ApplicationWindow):
                     ("Hari berikutnya", "<Ctrl>Right"),
                     ("Kembali ke hari ini", "<Ctrl>T"),
                     ("Riwayat (harian)", "<Ctrl>1"),
-                    ("Riwayat (bulanan)", "<Ctrl>2"),
+                    ("Kalender (bulanan)", "<Ctrl>2"),
                     ("Riwayat (tahunan)", "<Ctrl>3"),
                 ),
             ),

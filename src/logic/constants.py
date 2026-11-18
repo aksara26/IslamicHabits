@@ -6,8 +6,8 @@ LICENSE = "GPL-3.0-or-later"
 
 # Format berkas ekspor berversi. Diimpor/dievaluasi oleh lapisan data nanti.
 EXPORT_FORMAT = "islamichabits-export"
-SCHEMA_VERSION = 1
-EXPORT_VERSION = 1
+SCHEMA_VERSION = 2
+EXPORT_VERSION = 2
 
 # Cadangan otomatis: mingguan, ke folder yang dipilih pengguna.
 BACKUP_INTERVAL_DAYS = 7
@@ -16,6 +16,7 @@ BACKUP_INTERVAL_DAYS = 7
 SETTING_THEME = "tema"
 SETTING_REMINDER_ENABLED = "pengingat_aktif"
 SETTING_REMINDER_TIME = "pengingat_jam"
+SETTING_REMINDER_POPUP = "pengingat_popup"
 SETTING_BACKUP_FOLDER = "folder_cadangan"
 SETTING_MUHASABAH_PROMPTS = "pertanyaan_muhasabah"
 SETTING_NICKNAME = "nama_panggilan"

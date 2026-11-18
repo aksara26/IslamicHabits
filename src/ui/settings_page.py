@@ -20,6 +20,7 @@ from ..logic.constants import (
     REPOSITORY_URL,
     SETTING_BACKUP_FOLDER,
     SETTING_REMINDER_ENABLED,
+    SETTING_REMINDER_POPUP,
     SETTING_REMINDER_TIME,
     SETTING_THEME,
 )
@@ -42,6 +43,7 @@ __all__ = ["SettingsPage", "THEME_KEYS", "THEME_LABELS"]
 ToastCallback = Callable[[str, str | None, Callable[[], None] | None], None]
 ThemeCallback = Callable[[str], None]
 DataChangedCallback = Callable[[], None]
+NotificationCallback = Callable[[], None]
 
 
 class SettingsPage(Gtk.Box):
@@ -54,12 +56,14 @@ class SettingsPage(Gtk.Box):
         on_theme_changed: ThemeCallback,
         on_toast: ToastCallback,
         on_data_changed: DataChangedCallback,
+        on_test_notification: NotificationCallback,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_theme_changed = on_theme_changed
         self._on_toast = on_toast
         self._on_data_changed = on_data_changed
+        self._on_test_notification = on_test_notification
         self._refreshing = False
 
         self._build_page()
@@ -92,6 +96,9 @@ class SettingsPage(Gtk.Box):
 
             self._reminder_switch.set_active(
                 self._repo.get_setting(SETTING_REMINDER_ENABLED, "0") == "1"
+            )
+            self._popup_switch.set_active(
+                self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1"
             )
             self._time_row.set_text(
                 self._repo.get_setting(SETTING_REMINDER_TIME, "20:00")
@@ -129,6 +136,25 @@ class SettingsPage(Gtk.Box):
         )
         self._reminder_switch.connect("notify::active", self._on_reminder_toggled)
         group.add(self._reminder_switch)
+
+        self._popup_switch = Adw.SwitchRow(
+            title="Popup pemberitahuan",
+            subtitle="Tampilkan notifikasi desktop saat pengingat berbunyi",
+        )
+        self._popup_switch.set_active(
+            self._repo.get_setting(SETTING_REMINDER_POPUP, "1") == "1"
+        )
+        self._popup_switch.connect("notify::active", self._on_popup_toggled)
+        group.add(self._popup_switch)
+
+        group.add(
+            self._action_row(
+                "Uji notifikasi",
+                "Kirim satu popup contoh untuk memeriksa izin sistem",
+                "Kirim",
+                self._on_test_notification,
+            )
+        )
 
         self._time_row = Adw.EntryRow(title="Jam (HH:MM)")
         self._time_row.set_text(self._repo.get_setting(SETTING_REMINDER_TIME, "20:00"))
@@ -227,6 +253,13 @@ class SettingsPage(Gtk.Box):
             return
         self._repo.set_setting(
             SETTING_REMINDER_ENABLED, "1" if row.get_active() else "0"
+        )
+
+    def _on_popup_toggled(self, row: Adw.SwitchRow, *_args: object) -> None:
+        if self._refreshing:
+            return
+        self._repo.set_setting(
+            SETTING_REMINDER_POPUP, "1" if row.get_active() else "0"
         )
 
     def _on_time_changed(self, row: Adw.EntryRow) -> None:
@@ -332,7 +365,8 @@ class SettingsPage(Gtk.Box):
 
         details = (
             f"Berkas berisi {preview.counts['ibadah']} ibadah, "
-            f"{preview.counts['catatan']} catatan, dan "
+            f"{preview.counts['catatan']} catatan ibadah, "
+            f"{preview.counts['catatan_harian']} catatan harian, dan "
             f"{preview.counts['muhasabah']} muhasabah.\n\n"
             f"Baris baru: {preview.total_new}. "
             f"Kunci sudah ada: {preview.total_conflicts}."
@@ -374,8 +408,9 @@ class SettingsPage(Gtk.Box):
         dialog = Adw.AlertDialog(
             heading="Hapus semua data?",
             body=(
-                "Seluruh ibadah, catatan, muhasabah, dan pengaturan akan dihapus, "
-                "lalu ibadah bawaan dikembalikan. Buat cadangan dulu bila perlu."
+                "Seluruh ibadah, catatan ibadah, catatan harian, muhasabah, dan "
+                "pengaturan akan dihapus, lalu ibadah bawaan dikembalikan. "
+                "Buat cadangan dulu bila perlu."
             ),
         )
         dialog.add_response("cancel", "Batal")

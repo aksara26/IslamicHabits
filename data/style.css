@@ -1,15 +1,21 @@
-/* Palet biru gelap IslamicHabits: tenang, netral, dan tanpa merah untuk "belum". */
+/* Palet hijau sage IslamicHabits: tenang, netral, dan tanpa merah untuk "belum".
+ *
+ * Nilai di bawah dipakai pada tema terang. Bila tema gelap aktif,
+ * style-dark.css mengganti definisi warna dengan varian yang lebih terang agar
+ * kontras tetap baik. Penanda status memakai simbol dan teks, bukan warna saja.
+ */
 
-@define-color ih-blue #1b3a5c;
-@define-color ih-accent #5b8bb8;
-@define-color ih-surface #f5f8fc;
-@define-color ih-ink #12233a;
-@define-color ih-night #0b1626;
-@define-color ih-done #3d7eb5;
-@define-color ih-pending #8794a5;
+@define-color ih-sage #2f5142;
+@define-color ih-accent #557965;
+@define-color ih-surface #f6f8f4;
+@define-color ih-ink #1c2b24;
+@define-color ih-night #101b15;
+@define-color ih-done #3f6e55;
+@define-color ih-pending #69746b;
 
 .state-kosong {
-  opacity: 0.62;
+  /* Jangan memakai transparansi: itu menurunkan kontras efektif di bawah 4.5:1. */
+  color: @ih-pending;
 }
 
 .state-sebagian {

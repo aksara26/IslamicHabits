@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from datetime import date, timedelta
 
 try:
     import gi
@@ -18,6 +19,7 @@ except Exception:  # pragma: no cover - bergantung pada lingkungan
 if GTK_TERSEDIA:
     from src.logic.database import connect
     from src.logic.repository import Repository
+    from src.logic.statistics import EntryKind
     from src.ui.history_page import HistoryPage
     from src.ui.muhasabah_page import MuhasabahPage
     from src.ui.settings_page import SettingsPage
@@ -57,10 +59,68 @@ class UiSmokeTests(unittest.TestCase):
             on_theme_changed=lambda _theme: None,
             on_toast=self._toast,
             on_data_changed=lambda: None,
+            on_test_notification=lambda: None,
         )
 
         for page in (today, history, muhasabah, settings):
             self.assertIsNotNone(page.get_first_child())
+
+    def test_kartu_catatan_harian_tersimpan(self) -> None:
+        today = TodayPage(
+            self.repo,
+            on_add_worship=lambda: None,
+            on_data_changed=lambda: None,
+        )
+        buffer = today._note_view.get_buffer()
+        buffer.set_text("Catatan dari halaman Hari Ini")
+        today._save_note_now()
+        self.assertEqual(
+            self.repo.get_daily_note(date.today()).text,
+            "Catatan dari halaman Hari Ini",
+        )
+
+    def test_kalender_menampilkan_capaian_dan_catatan_hari_lalu(self) -> None:
+        day = date.today() - timedelta(days=1)
+        worship = self.repo.add_worship(
+            name="Subuh kemarin",
+            kind=EntryKind.CHECK,
+            active_from=day,
+        )
+        self.repo.set_entry(
+            worship.id, day, value=True, note="catatan ibadah kemarin"
+        )
+        self.repo.save_daily_note(day, "Catatan harian kemarin")
+
+        history = HistoryPage(
+            self.repo,
+            on_open_day=lambda _day: None,
+            on_toast=self._toast,
+        )
+        history.go_to_day(day)
+        history.set_mode("month")
+
+        self.assertEqual(history._views.get_visible_child_name(), "month")
+        self.assertIn(
+            "Terlaksana 1 dari 1 ibadah",
+            history._calendar_detail_state.get_label(),
+        )
+        self.assertIn("●", history._calendar_detail_state.get_label())
+
+        rows = []
+        child = history._calendar_detail_list.get_first_child()
+        while child is not None:
+            rows.append(child)
+            child = child.get_next_sibling()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].get_title(), "Subuh kemarin")
+        self.assertIn("Selesai", rows[0].get_subtitle())
+        self.assertIn("catatan ibadah kemarin", rows[0].get_subtitle())
+        self.assertIn(
+            "Catatan harian kemarin", history._calendar_detail_note.get_label()
+        )
+
+        history.set_mode("day")
+        self.assertIn("Catatan harian kemarin", history._day_note_text.get_label())
 
     def test_garis_tren_bisa_difokus(self) -> None:
         self.assertTrue(TrendLine().get_focusable())

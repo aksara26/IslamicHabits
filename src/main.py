@@ -54,6 +54,10 @@ class IslamicHabitsApplication(Adw.Application):
         self.add_action(quit_action)
         self.set_accels_for_action("app.quit", ["<Ctrl>Q"])
 
+        open_muhasabah = Gio.SimpleAction.new("open-muhasabah", None)
+        open_muhasabah.connect("activate", self._on_open_muhasabah)
+        self.add_action(open_muhasabah)
+
         self.set_accels_for_action("win.prev-day", ["<Ctrl>Left"])
         self.set_accels_for_action("win.next-day", ["<Ctrl>Right"])
         self.set_accels_for_action("win.today", ["<Ctrl>T"])
@@ -65,6 +69,13 @@ class IslamicHabitsApplication(Adw.Application):
         self.set_accels_for_action("win.search", ["<Ctrl>F"])
         self.set_accels_for_action("win.undo", ["<Ctrl>Z"])
         self.set_accels_for_action("win.shortcuts", ["<Ctrl>question"])
+
+    def _on_open_muhasabah(self, *_args: object) -> None:
+        window = self.props.active_window
+        if window is None:
+            window = MainWindow(application=self, repository=self.repository)
+        window.present()
+        window.open_muhasabah_today()
 
     def do_activate(self) -> None:
         window = self.props.active_window

@@ -16,9 +16,10 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gtk
 
-from ..logic.repository import Repository
+from ..logic.repository import EntryRecord, Repository, WorshipRecord
 from ..logic.statistics import (
     DayState,
+    StatusValue,
     Worship,
     compute_daily,
     compute_range,
@@ -62,6 +63,35 @@ def _format_day(day: date) -> str:
     return f"{HARI[day.weekday()]}, {day.day} {BULAN[day.month - 1]} {day.year}"
 
 
+def _format_entry_detail(entry: EntryRecord, worship: WorshipRecord | None) -> str:
+    """Ringkas nilai, jam, dan catatan per ibadah untuk tampilan riwayat."""
+
+    parts: list[str] = []
+    value = entry.value
+    if value is True:
+        parts.append("Selesai")
+    elif value is False:
+        parts.append("Belum")
+    elif isinstance(value, (int, float)):
+        amount = f"{value:g}"
+        if worship is not None:
+            if worship.unit:
+                amount = f"{amount} {worship.unit}"
+            if worship.target:
+                amount = f"{amount} / target {worship.target:g}"
+        parts.append(amount)
+    elif isinstance(value, StatusValue):
+        parts.append(value.value.replace("-", " ").capitalize())
+    elif value is not None:
+        parts.append(str(value))
+
+    if entry.time:
+        parts.append(f"jam {entry.time}")
+    if entry.note:
+        parts.append(entry.note)
+    return " · ".join(parts) or "Tanpa keterangan tambahan"
+
+
 def _last_day(year: int, month: int) -> int:
     if month == 12:
         return (date(year + 1, 1, 1) - timedelta(days=1)).day
@@ -97,7 +127,8 @@ class HistoryPage(Gtk.Box):
 
         self._mode = "day"
         self._day = date.today()
-        self._anchor = date.today()  # dipakai Bulanan & Tahunan
+        self._anchor = date.today()  # dipakai Kalender & Tahunan
+        self._calendar_selected = date.today()
         self._filter_key: FilterKey = _ALL_FILTER
         self._filter_keys: list[FilterKey] = [_ALL_FILTER]
         self._show_archived = False
@@ -113,7 +144,7 @@ class HistoryPage(Gtk.Box):
         group = Adw.ToggleGroup()
         for label, name in (
             ("Harian", "day"),
-            ("Bulanan", "month"),
+            ("Kalender", "month"),
             ("Tahunan", "year"),
         ):
             group.add(Adw.Toggle(label=label, name=name))
@@ -207,6 +238,16 @@ class HistoryPage(Gtk.Box):
         self._day_detail.set_selection_mode(Gtk.SelectionMode.NONE)
         box.append(self._day_detail)
 
+        note_title = Gtk.Label(label="Catatan harian")
+        note_title.set_xalign(0)
+        note_title.add_css_class("dim-label")
+        box.append(note_title)
+        self._day_note_text = Gtk.Label(label="")
+        self._day_note_text.set_xalign(0)
+        self._day_note_text.set_wrap(True)
+        self._day_note_text.add_css_class("dim-label")
+        box.append(self._day_note_text)
+
         open_button = Gtk.Button(label="Lihat dan isi di Hari Ini")
         open_button.set_halign(Gtk.Align.START)
         open_button.connect("clicked", lambda *_: self._on_open_day(self._day))
@@ -226,6 +267,30 @@ class HistoryPage(Gtk.Box):
         self._month_grid.set_column_homogeneous(True)
         self._month_grid.set_halign(Gtk.Align.FILL)
         box.append(self._month_grid)
+
+        detail_title = Gtk.Label(label="Detail hari terpilih")
+        detail_title.set_xalign(0)
+        detail_title.add_css_class("dim-label")
+        box.append(detail_title)
+        self._calendar_detail_state = Gtk.Label(label="")
+        self._calendar_detail_state.set_xalign(0)
+        self._calendar_detail_state.set_wrap(True)
+        box.append(self._calendar_detail_state)
+        self._calendar_detail_list = Gtk.ListBox()
+        self._calendar_detail_list.add_css_class("boxed-list")
+        self._calendar_detail_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        box.append(self._calendar_detail_list)
+        self._calendar_detail_note = Gtk.Label(label="")
+        self._calendar_detail_note.set_xalign(0)
+        self._calendar_detail_note.set_wrap(True)
+        self._calendar_detail_note.add_css_class("dim-label")
+        box.append(self._calendar_detail_note)
+        open_selected = Gtk.Button(label="Isi hari ini di Hari Ini")
+        open_selected.set_halign(Gtk.Align.START)
+        open_selected.connect(
+            "clicked", lambda *_: self._on_open_day(self._calendar_selected)
+        )
+        box.append(open_selected)
 
         month_title = Gtk.Label(label="Ringkasan per ibadah")
         month_title.set_xalign(0)
@@ -256,14 +321,17 @@ class HistoryPage(Gtk.Box):
 
     # -- data ------------------------------------------------------------
 
-    def _worships(self) -> tuple[Worship, ...]:
+    def _worship_records(self) -> tuple[WorshipRecord, ...]:
         records = self._repo.list_worships(include_archived=self._show_archived)
         kind, value = self._filter_key
         if kind == "category":
             records = tuple(item for item in records if item.category_id == value)
         elif kind == "worship":
             records = tuple(item for item in records if item.id == value)
-        return tuple(item.to_statistics() for item in records)
+        return records
+
+    def _worships(self) -> tuple[Worship, ...]:
+        return tuple(item.to_statistics() for item in self._worship_records())
 
     def _entries(self, start: date, end: date):
         allowed = {item.id for item in self._worships()}
@@ -322,17 +390,20 @@ class HistoryPage(Gtk.Box):
         today = date.today()
         self._day = today
         self._anchor = today
+        self._calendar_selected = today
         self.refresh()
 
     def go_to_day(self, day: date) -> None:
         self._day = day
         self._anchor = day
+        self._calendar_selected = day
         self.refresh()
 
     def _shift(self, direction: int) -> None:
         if self._mode == "day":
             self._day += timedelta(days=direction)
             self._anchor = self._day
+            self._calendar_selected = self._day
         elif self._mode == "month":
             self._anchor = _shift_month(self._anchor, direction)
             self._day = self._anchor
@@ -387,16 +458,29 @@ class HistoryPage(Gtk.Box):
         self._apply_state_class(self._day_state, summary.state)
         set_accessible_label(self._day_state, self._day_state.get_label())
 
+        note = self._repo.get_daily_note(self._day).text
+        self._day_note_text.set_label(note or "Belum ada catatan harian.")
+        set_accessible_label(self._day_note_text, self._day_note_text.get_label())
+
         self._clear_list(self._day_detail)
         if not summary.per_worship:
             row = Adw.ActionRow(title="Tidak ada ibadah aktif")
             row.set_subtitle("Tambahkan ibadah atau ubah filter untuk melihat rekap.")
             self._day_detail.append(row)
             return
+
+        records = {item.id: item for item in self._worship_records()}
+        entry_map = {
+            item.worship_id: item
+            for item in self._repo.list_entries(start=self._day, end=self._day)
+        }
         for item in summary.per_worship:
             label = "Terlaksana" if item.completed else (
                 "Sebagian" if item.partial else "Belum ada catatan"
             )
+            entry = entry_map.get(item.worship_id)
+            if entry is not None:
+                label += f" — {_format_entry_detail(entry, records.get(item.worship_id))}"
             row = Adw.ActionRow(title=item.name, subtitle=label)
             state = DayState.FULL if item.completed else (
                 DayState.PARTIAL if item.partial else DayState.EMPTY
@@ -431,16 +515,23 @@ class HistoryPage(Gtk.Box):
     def _refresh_month(self) -> None:
         self._clear_grid(self._month_grid)
         self._clear_list(self._month_summary)
+        self._clear_list(self._calendar_detail_list)
 
         year, month = self._anchor.year, self._anchor.month
         first = date(year, month, 1)
-        days_in_month = (
+        last = (
             (date(year + 1, 1, 1) - timedelta(days=1))
             if month == 12
             else date(year, month + 1, 1) - timedelta(days=1)
-        ).day
+        )
+        days_in_month = last.day
+        if (self._calendar_selected.year, self._calendar_selected.month) != (year, month):
+            self._calendar_selected = first
         worships = self._worships()
-        entries = self._entries(first, date(year, month, days_in_month))
+        entries = self._entries(first, last)
+        noted_days = {
+            item.day for item in self._repo.list_daily_notes(start=first, end=last)
+        }
         states: dict[int, DayState] = {}
         for day_number in range(1, days_in_month + 1):
             states[day_number] = compute_daily(
@@ -456,21 +547,28 @@ class HistoryPage(Gtk.Box):
         for day_number in range(1, days_in_month + 1):
             index = start_column + day_number - 1
             state = states[day_number]
+            captured_day = date(year, month, day_number)
+            has_note = captured_day in noted_days
             button = Gtk.Button()
             inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             number = Gtk.Label(label=str(day_number))
             mark = Gtk.Label(label=STATE_SYMBOL[state])
             self._apply_state_class(mark, state)
+            note_mark = Gtk.Label(label="✎" if has_note else "")
+            note_mark.add_css_class("dim-label")
+            set_accessible_label(note_mark, "Ada catatan harian" if has_note else "")
             inner.append(number)
             inner.append(mark)
+            inner.append(note_mark)
             button.set_child(inner)
+            note_text = " · ada catatan harian" if has_note else ""
             button.set_tooltip_text(
-                f"{day_number} {BULAN[month - 1]}: {STATE_TEXT[state]}"
+                f"{day_number} {BULAN[month - 1]}: {STATE_TEXT[state]}{note_text}"
             )
             set_accessible_label(
-                button, f"{day_number} {BULAN[month - 1]}, {STATE_TEXT[state]}"
+                button,
+                f"{day_number} {BULAN[month - 1]}, {STATE_TEXT[state]}{note_text}",
             )
-            captured_day = date(year, month, day_number)
             button.connect("clicked", self._on_calendar_day, captured_day)
             self._month_grid.attach(button, index % 7, index // 7 + 1, 1, 1)
 
@@ -487,9 +585,59 @@ class HistoryPage(Gtk.Box):
             row = Adw.ActionRow(title="Tidak ada ibadah aktif pada bulan ini")
             self._month_summary.append(row)
 
+        self._refresh_calendar_detail(worships, entries)
+
+    def _refresh_calendar_detail(
+        self,
+        worships: tuple[Worship, ...],
+        entries: tuple,
+    ) -> None:
+        """Tampilkan capaian dan catatan dari hari yang dipilih di kalender."""
+
+        day = self._calendar_selected
+        daily_entries = tuple(item for item in entries if item.day == day)
+        daily = compute_daily(
+            day,
+            worships,
+            daily_entries,
+        )
+        self._calendar_detail_state.set_label(
+            f"{_format_day(day)} — {STATE_SYMBOL[daily.state]} "
+            f"{STATE_TEXT[daily.state]} · Terlaksana {daily.completed} dari {daily.expected} ibadah"
+        )
+        self._apply_state_class(self._calendar_detail_state, daily.state)
+
+        records = {item.id: item for item in self._worship_records()}
+        allowed = {item.id for item in worships}
+        # ``entries`` adalah data statistik tanpa jam/catatan. Untuk detail,
+        # ambil catatan mentah dari repository agar keterangan tidak hilang.
+        entry_map = {
+            item.worship_id: item
+            for item in self._repo.list_entries(start=day, end=day)
+            if item.worship_id in allowed
+        }
+        for item in daily.per_worship:
+            label = "Terlaksana" if item.completed else (
+                "Sebagian" if item.partial else "Belum ada catatan"
+            )
+            entry = entry_map.get(item.worship_id)
+            if entry is not None:
+                label += f" — {_format_entry_detail(entry, records.get(item.worship_id))}"
+            row = Adw.ActionRow(title=item.name, subtitle=label)
+            self._calendar_detail_list.append(row)
+        if not daily.per_worship:
+            row = Adw.ActionRow(title="Tidak ada ibadah aktif pada hari ini")
+            self._calendar_detail_list.append(row)
+
+        note = self._repo.get_daily_note(day).text
+        self._calendar_detail_note.set_label(
+            f"Catatan harian: {note}" if note else "Catatan harian: belum ada."
+        )
+
     def _on_calendar_day(self, _button: Gtk.Button, day: date) -> None:
-        self.go_to_day(day)
-        self.set_mode("day")
+        self._calendar_selected = day
+        self._day = day
+        self.refresh()
 
     def _refresh_year(self) -> None:
         child = self._year_text.get_first_child()

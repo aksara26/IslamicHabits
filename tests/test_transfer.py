@@ -82,6 +82,9 @@ class TransferTests(unittest.TestCase):
                 "muhasabah": [
                     {"tanggal": "2026-11-18", "teks": "Renungan", "jawaban": "hadir"}
                 ],
+                "catatan_harian": [
+                    {"tanggal": "2026-11-18", "teks": "Catatan dari impor"}
+                ],
                 "pengaturan": [{"kunci": "tema", "nilai": "gelap"}],
                 "meta": [{"kunci": "cadangan_terakhir", "nilai": "2026-11-18"}],
             },
@@ -95,7 +98,15 @@ class TransferTests(unittest.TestCase):
         self.assertEqual(payload["format"], EXPORT_FORMAT)
         self.assertEqual(payload["schema_version"], SCHEMA_VERSION)
         self.assertEqual(payload["export_version"], EXPORT_VERSION)
-        for table in ("kategori", "ibadah", "catatan", "muhasabah", "pengaturan", "meta"):
+        for table in (
+            "kategori",
+            "ibadah",
+            "catatan",
+            "muhasabah",
+            "catatan_harian",
+            "pengaturan",
+            "meta",
+        ):
             self.assertIn(table, payload["data"])
         self.assertGreater(len(payload["data"]["ibadah"]), 0)
         self.assertIn("exported_at", payload)
@@ -117,6 +128,42 @@ class TransferTests(unittest.TestCase):
             # String JSON juga bisa dibaca langsung.
             from_string = parse_export(path.read_text(encoding="utf-8"))
             self.assertEqual(from_string["data"], payload["data"])
+
+    def test_daily_notes_are_exported_and_imported(self) -> None:
+        self.repo.save_daily_note(date(2026, 11, 18), "Catatan harian asli")
+        payload = create_export(self.repo)
+        self.assertEqual(
+            payload["data"]["catatan_harian"],
+            [{"tanggal": "2026-11-18", "teks": "Catatan harian asli"}],
+        )
+
+        other = Repository(connect(":memory:"))
+        self.addCleanup(other.close)
+        preview = describe_import(other, payload)
+        self.assertEqual(preview.counts["catatan_harian"], 1)
+        self.assertEqual(preview.new["catatan_harian"], 1)
+
+        summary = import_payload(other, payload, mode="merge")
+        self.assertEqual(summary.inserted["catatan_harian"], 1)
+        self.assertEqual(
+            other.get_daily_note(date(2026, 11, 18)).text, "Catatan harian asli"
+        )
+
+    def test_old_export_without_daily_notes_is_accepted(self) -> None:
+        payload = self._sample_payload()
+        payload["schema_version"] = 1
+        payload["export_version"] = 1
+        payload["data"].pop("catatan_harian")
+
+        validate_payload(payload)
+        self.assertEqual(describe_import(self.repo, payload).counts["catatan_harian"], 0)
+
+        self.repo.save_daily_note(date(2026, 11, 18), "Catatan lokal tetap ada")
+        import_payload(self.repo, payload, mode="merge")
+        self.assertEqual(
+            self.repo.get_daily_note(date(2026, 11, 18)).text,
+            "Catatan lokal tetap ada",
+        )
 
     # -- validasi --------------------------------------------------------
 
@@ -182,6 +229,17 @@ class TransferTests(unittest.TestCase):
 
         payload = self._sample_payload()
         payload["data"]["ibadah"][0]["hari_aktif"] = 200
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+    def test_invalid_daily_note_is_rejected(self) -> None:
+        payload = self._sample_payload()
+        payload["data"]["catatan_harian"][0]["tanggal"] = "18-11-2026"
+        with self.assertRaises(TransferError):
+            validate_payload(payload)
+
+        payload = self._sample_payload()
+        payload["data"]["catatan_harian"][0]["teks"] = 42
         with self.assertRaises(TransferError):
             validate_payload(payload)
 

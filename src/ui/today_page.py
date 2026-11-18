@@ -156,6 +156,8 @@ class TodayPage(Gtk.Box):
         self.day = date.today()
         self._known_today = date.today()
         self._rows: dict[int, "WorshipRow"] = {}
+        self._note_source: int | None = None
+        self._note_loading = False
 
         self._build_navigation()
         self._build_day_change_notice()
@@ -175,10 +177,17 @@ class TodayPage(Gtk.Box):
         summary_box.append(self._progress)
         self.append(summary_box)
 
+        self._content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self._list_holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self._content_box.append(self._list_holder)
+        self._content_box.append(self._build_daily_note_card())
+
         self._scrolled = Gtk.ScrolledWindow(vexpand=True)
         self._scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self._scrolled.set_child(self._content_box)
         self.append(self._scrolled)
 
+        self._load_note()
         self.refresh()
         GLib.timeout_add_seconds(30, self._check_day_change)
 
@@ -239,14 +248,94 @@ class TodayPage(Gtk.Box):
         self._day_change_revealer.set_child(notice)
         self.append(self._day_change_revealer)
 
+    def _build_daily_note_card(self) -> Gtk.Box:
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        card.add_css_class("ih-card")
+        card.set_margin_start(18)
+        card.set_margin_end(18)
+        card.set_margin_top(12)
+        card.set_margin_bottom(18)
+
+        title = Gtk.Label(label="Catatan harian")
+        title.set_xalign(0)
+        title.add_css_class("dim-label")
+        hint = Gtk.Label(label="Tulis hal singkat tentang hari ini; tersimpan otomatis.")
+        hint.set_xalign(0)
+        hint.add_css_class("dim-label")
+        hint.set_wrap(True)
+
+        self._note_view = Gtk.TextView()
+        self._note_view.set_wrap_mode(Gtk.WrapMode.WORD)
+        self._note_view.set_accepts_tab(False)
+        self._note_view.get_buffer().connect("changed", self._on_note_changed)
+        set_accessible_label(self._note_view, "Catatan harian")
+        note_scroll = Gtk.ScrolledWindow()
+        note_scroll.set_min_content_height(90)
+        note_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        note_scroll.set_child(self._note_view)
+
+        self._note_status = Gtk.Label(label="Tersimpan otomatis")
+        self._note_status.set_xalign(0)
+        self._note_status.add_css_class("dim-label")
+
+        card.append(title)
+        card.append(hint)
+        card.append(note_scroll)
+        card.append(self._note_status)
+        return card
+
+    # -- catatan harian ---------------------------------------------------
+
+    def _note_text(self) -> str:
+        buffer = self._note_view.get_buffer()
+        return buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+
+    def _load_note(self) -> None:
+        self._note_loading = True
+        try:
+            record = self._repo.get_daily_note(self.day)
+            self._note_view.get_buffer().set_text(record.text)
+            self._note_status.set_label("Tersimpan otomatis")
+        finally:
+            self._note_loading = False
+
+    def _on_note_changed(self, *_args: object) -> None:
+        if self._note_loading:
+            return
+        self._note_status.set_label("Menunggu penyimpanan…")
+        if self._note_source is not None:
+            GLib.source_remove(self._note_source)
+        self._note_source = GLib.timeout_add_seconds(1, self._autosave_note)
+
+    def _autosave_note(self) -> bool:
+        self._note_source = None
+        self._save_note_now()
+        return False
+
+    def _save_note_now(self, *, notify: bool = True) -> None:
+        self._repo.save_daily_note(self.day, self._note_text())
+        self._note_status.set_label("Tersimpan otomatis")
+        if notify:
+            self._on_data_changed()
+
+    def _flush_note(self, *, notify: bool = True) -> None:
+        if self._note_source is not None:
+            GLib.source_remove(self._note_source)
+            self._note_source = None
+            self._save_note_now(notify=notify)
+
     # -- navigasi tanggal ------------------------------------------------
 
     def go_previous_day(self) -> None:
+        self._flush_note()
         self.day -= timedelta(days=1)
+        self._load_note()
         self.refresh()
 
     def go_next_day(self) -> None:
+        self._flush_note()
         self.day += timedelta(days=1)
+        self._load_note()
         self.refresh()
 
     def go_today(self) -> None:
@@ -255,8 +344,10 @@ class TodayPage(Gtk.Box):
     def set_day(self, day: date) -> None:
         """Tampilkan tanggal tertentu, misalnya dari kalender Riwayat."""
 
+        self._flush_note()
         self.day = day
         self._day_change_revealer.set_reveal_child(False)
+        self._load_note()
         self.refresh()
 
     def _check_day_change(self) -> bool:
@@ -310,6 +401,7 @@ class TodayPage(Gtk.Box):
         ]
 
         self._rows.clear()
+        self._clear_container(self._list_holder)
         if not active:
             empty = Adw.StatusPage(
                 title="Belum ada ibadah",
@@ -320,7 +412,7 @@ class TodayPage(Gtk.Box):
             button.add_css_class("suggested-action")
             button.connect("clicked", lambda *_: self._on_add_worship())
             empty.set_child(button)
-            self._scrolled.set_child(empty)
+            self._list_holder.append(empty)
             return
 
         group = Gtk.ListBox()
@@ -353,9 +445,17 @@ class TodayPage(Gtk.Box):
                 expander.add_row(row)
             group.append(expander)
 
-        self._scrolled.set_child(group)
+        self._list_holder.append(group)
         if focused_id is not None and focused_id in self._rows:
             GLib.idle_add(self._rows[focused_id].focus_value)
+
+    @staticmethod
+    def _clear_container(container: Gtk.Box) -> None:
+        child = container.get_first_child()
+        while child is not None:
+            following = child.get_next_sibling()
+            container.remove(child)
+            child = following
 
     def _create_row(self, worship: WorshipRecord, entry: EntryRecord | None):
         from .worship_row import WorshipRow
@@ -396,3 +496,9 @@ class TodayPage(Gtk.Box):
     def _on_entry_details_changed(self) -> None:
         self.refresh()
         self._on_data_changed()
+
+    def do_dispose(self) -> None:
+        # Saat jendela ditutup, simpan tulisan yang belum sempat masuk timer.
+        # Jangan memicu penyegaran UI dari widget yang sedang dibongkar.
+        self._flush_note(notify=False)
+        Gtk.Box.do_dispose(self)
