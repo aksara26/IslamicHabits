@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Data pengguna (jangan pernah masuk git)
+*.db
+*.sqlite
+*.sqlite3
+data-user/
+
+# Build
+build/
+builddir/
+_dist/
+
+# Pengemasan
+*.flatpak
+*.AppImage
+
+# Editor
+.idea/
+.vscode/
+*~

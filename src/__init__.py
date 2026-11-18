@@ -1,0 +1,1 @@
+"""IslamicHabits — pencatat ibadah lokal."""
