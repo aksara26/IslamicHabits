@@ -37,6 +37,8 @@ __all__ = [
     "classify_day",
     "compute_daily",
     "compute_range",
+    "compute_day_series",
+    "compute_month_series",
     "compute_yearly_series",
     "describe_completion",
     "describe_daily_completion",
@@ -130,7 +132,12 @@ class PeriodSummary:
 
 @dataclass(frozen=True)
 class YearPoint:
-    """Satu titik pada garis tren tahunan."""
+    """Satu titik pada garis tren; ``month`` bisa berarti bulan atau hari.
+
+    Seri tahunan memakai ``month`` = 1..12, sedangkan seri harian memakai
+    ``month`` = nomor tanggal 1..31. Nama field sengaja dipertahankan agar
+    satu widget garis bisa dipakai untuk semua periode.
+    """
 
     month: int
     completed_days: int
@@ -404,17 +411,49 @@ def compute_yearly_series(
     return tuple(points)
 
 
+def compute_day_series(
+    start: date,
+    end: date,
+    worships: Iterable[Worship],
+    entries: Iterable[Entry],
+) -> tuple[YearPoint, ...]:
+    """Titik tren harian. ``month`` dipakai sebagai nomor hari (1–31)."""
+
+    summaries = compute_range(start, end, worships, entries, granularity="day")
+    return tuple(
+        YearPoint(
+            month=date.fromisoformat(item.key).day,
+            completed_days=item.completed_days,
+            expected_days=item.expected_days,
+        )
+        for item in summaries
+    )
+
+
+def compute_month_series(
+    year: int,
+    month: int,
+    worships: Iterable[Worship],
+    entries: Iterable[Entry],
+) -> tuple[YearPoint, ...]:
+    """Titik tren untuk setiap hari dalam satu bulan."""
+
+    return compute_day_series(
+        date(year, month, 1), _last_day(year, month), worships, entries
+    )
+
+
 def describe_completion(completed: int, expected: int) -> str:
     """Kalimat netral untuk rentang hari; tidak memakai 'gagal'."""
 
     if expected <= 0:
-        return "Tidak ada ibadah aktif pada rentang ini"
+        return "Tidak ada kegiatan aktif pada rentang ini"
     return f"Terlaksana {completed} dari {expected} hari"
 
 
 def describe_daily_completion(completed: int, expected: int) -> str:
-    """Kalimat netral untuk satu hari (satuan: ibadah)."""
+    """Kalimat netral untuk satu hari (satuan: kegiatan)."""
 
     if expected <= 0:
-        return "Tidak ada ibadah aktif hari ini"
-    return f"Terlaksana {completed} dari {expected} ibadah"
+        return "Tidak ada kegiatan aktif hari ini"
+    return f"Terlaksana {completed} dari {expected} kegiatan"

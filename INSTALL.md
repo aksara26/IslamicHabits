@@ -193,20 +193,25 @@ ekspor/cadangan ke folder yang sama agar mudah dipindahkan.
 ## 6. Pertama kali menjalankan
 
 1. Dialog pengenalan muncul sekali. Baca prinsipnya, lalu pilih **Mulai mencatat**.
-2. Ibadah bawaan (sholat fardhu, sunnah, tilawah, dzikir, dan lain-lain) sudah
-   tersedia di **Hari Ini**.
+2. Ibadah bawaan (sholat fardhu, sunnah, tilawah, dzikir, dan lain-lain) serta
+   kebiasaan bawaan (Belajar, Baca buku, Olahraga, Jalan kaki, Tidur awal) sudah
+   tersedia di **Hari Ini** dan ikut dihitung di statistik yang sama.
 3. Sesuaikan daftar di **Kelola Ibadah**: tambah, ubah, urutkan, atau arsipkan.
-   Arsip tidak menghapus riwayat.
+   Arsip tidak menghapus riwayat. Tombol **Tambah kebiasaan** menyiapkan preset
+   kebiasaan dengan kategori **Kebiasaan**; pintasannya `Ctrl+Shift+N`.
 4. Isi **Pengaturan** bila ingin tema tertentu (palet sage terang/gelap),
    pengingat harian, popup pemberitahuan, atau folder cadangan.
 5. Sidebar memiliki tujuh menu terpisah: **Hari Ini**, **Riwayat**, **Kalender**,
    **Histori Catatan**, **Muhasabah**, **Kelola Ibadah**, dan **Pengaturan**.
    Pintasannya: `Ctrl+1` Riwayat harian, `Ctrl+2` Kalender, `Ctrl+3` Riwayat
-   tahunan, dan `Ctrl+4` Histori Catatan.
-6. Di bawah daftar **Hari Ini** tersedia kartu **Catatan harian** yang tersimpan
+   tahunan, `Ctrl+4` Histori Catatan, dan `Ctrl+Shift+N` kebiasaan baru.
+6. Halaman **Riwayat** memuat tiga tren garis: 30 hari terakhir, per hari dalam
+   satu bulan, dan per bulan dalam satu tahun. Klik titik tren harian untuk
+   membuka tanggal itu; klik titik tren tahunan untuk membuka Kalender.
+7. Di bawah daftar **Hari Ini** tersedia kartu **Catatan harian** yang tersimpan
    otomatis. Catatan yang sama tampil pada detail hari di Riwayat dan Kalender,
    serta sebagai daftar di **Histori Catatan** (catatan harian saja).
-7. `Ctrl+F` memfokuskan pencarian catatan harian bila **Histori Catatan** sedang
+8. `Ctrl+F` memfokuskan pencarian catatan harian bila **Histori Catatan** sedang
    aktif; di halaman lain pintasan ini membuka pencarian muhasabah.
 
 Tidak ada akun dan tidak ada jaringan. Seluruh isian disimpan lokal.
@@ -236,8 +241,8 @@ Halaman **Pengaturan → Data → Lokasi data** menampilkan jalur ini dan tombol
 
 Mencopot aplikasi tidak otomatis menghapus data. Ini disengaja agar data tetap
 aman saat aplikasi diperbarui atau dipasang ulang. Untuk menghapus semua data
-dari dalam aplikasi, gunakan **Pengaturan → Data → Hapus semua data**; ibadah
-bawaan akan dikembalikan. Untuk menghapus folder data sepenuhnya, hapus manual
+dari dalam aplikasi, gunakan **Pengaturan → Data → Hapus semua data**; ibadah dan
+kebiasaan bawaan akan dikembalikan. Untuk menghapus folder data sepenuhnya, hapus manual
 jalur pada tabel di atas setelah membuat cadangan.
 
 ## 8. Mendapatkan paket dari GitHub Releases

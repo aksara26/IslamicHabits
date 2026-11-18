@@ -18,7 +18,13 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk
 
 from ..logic.repository import Repository, WorshipRecord
-from ..logic.statistics import Worship, compute_daily, compute_range, describe_completion
+from ..logic.statistics import (
+    Worship,
+    compute_daily,
+    compute_range,
+    describe_completion,
+    describe_daily_completion,
+)
 from .a11y import set_accessible_label
 from .history_common import (
     ALL_FILTER,
@@ -117,7 +123,9 @@ class CalendarPage(Gtk.Box):
         help_label = Gtk.Label(label="Simbol: ○ kosong · ◐ sebagian · ● penuh · ✎ ada catatan")
         help_label.set_hexpand(True)
         help_label.set_xalign(1)
-        help_label.add_css_class("dim-label")
+        help_label.set_wrap(True)
+        help_label.set_max_width_chars(28)
+        help_label.add_css_class("ih-hint")
         filters.append(help_label)
         self.append(filters)
 
@@ -133,11 +141,12 @@ class CalendarPage(Gtk.Box):
         self._month_grid.set_row_spacing(4)
         self._month_grid.set_column_homogeneous(True)
         self._month_grid.set_halign(Gtk.Align.FILL)
+        self._month_grid.add_css_class("ih-calendar-grid")
         box.append(self._month_grid)
 
         detail_title = Gtk.Label(label="Detail hari terpilih")
         detail_title.set_xalign(0)
-        detail_title.add_css_class("dim-label")
+        detail_title.add_css_class("ih-section-title")
         box.append(detail_title)
 
         self._calendar_detail_state = Gtk.Label(label="")
@@ -163,9 +172,9 @@ class CalendarPage(Gtk.Box):
         )
         box.append(open_selected)
 
-        month_title = Gtk.Label(label="Ringkasan per ibadah")
+        month_title = Gtk.Label(label="Ringkasan per kegiatan")
         month_title.set_xalign(0)
-        month_title.add_css_class("dim-label")
+        month_title.add_css_class("ih-section-title")
         box.append(month_title)
 
         self._month_summary = Gtk.ListBox()
@@ -202,7 +211,7 @@ class CalendarPage(Gtk.Box):
 
     def _sync_filter_model(self) -> None:
         keys: list[FilterKey] = [ALL_FILTER]
-        labels = ["Semua ibadah"]
+        labels = ["Semua ibadah & kebiasaan"]
         for category in self._repo.list_categories():
             keys.append(("category", category.id))
             labels.append(f"Kategori: {category.name}")
@@ -300,6 +309,9 @@ class CalendarPage(Gtk.Box):
             captured_day = date(first.year, first.month, day_number)
             has_note = captured_day in noted_days
             button = Gtk.Button()
+            button.add_css_class("ih-calendar-day")
+            if captured_day == self._calendar_selected:
+                button.add_css_class("ih-selected")
             inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             number = Gtk.Label(label=str(day_number))
             mark = Gtk.Label(label=STATE_SYMBOL[state])
@@ -328,7 +340,7 @@ class CalendarPage(Gtk.Box):
             self._month_summary.append(row)
         if not summary.per_worship:
             self._month_summary.append(
-                Adw.ActionRow(title="Tidak ada ibadah aktif pada bulan ini")
+                Adw.ActionRow(title="Tidak ada kegiatan aktif pada bulan ini")
             )
 
         self._refresh_calendar_detail(worships, entries)
@@ -343,7 +355,8 @@ class CalendarPage(Gtk.Box):
         daily = compute_daily(day, worships, daily_entries)
         self._calendar_detail_state.set_label(
             f"{format_day(day)} — {STATE_SYMBOL[daily.state]} "
-            f"{STATE_TEXT[daily.state]} · Terlaksana {daily.completed} dari {daily.expected} ibadah"
+            f"{STATE_TEXT[daily.state]} · "
+            + describe_daily_completion(daily.completed, daily.expected)
         )
         apply_state_class(self._calendar_detail_state, daily.state)
         set_accessible_label(
@@ -369,7 +382,7 @@ class CalendarPage(Gtk.Box):
             )
         if not daily.per_worship:
             self._calendar_detail_list.append(
-                Adw.ActionRow(title="Tidak ada ibadah aktif pada hari ini")
+                Adw.ActionRow(title="Tidak ada kegiatan aktif pada hari ini")
             )
 
         note = self._repo.get_daily_note(day).text

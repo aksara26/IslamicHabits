@@ -148,10 +148,12 @@ class TodayPage(Gtk.Box):
         *,
         on_add_worship: AddWorshipCallback,
         on_data_changed: DataChangedCallback,
+        on_add_habit: AddWorshipCallback | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_add_worship = on_add_worship
+        self._on_add_habit = on_add_habit or on_add_worship
         self._on_data_changed = on_data_changed
         self.day = date.today()
         self._known_today = date.today()
@@ -164,20 +166,40 @@ class TodayPage(Gtk.Box):
 
         self._summary_label = Gtk.Label(label="")
         self._summary_label.set_xalign(0)
-        self._summary_label.add_css_class("dim-label")
+        self._summary_label.add_css_class("ih-hint")
         self._progress = Gtk.ProgressBar()
         self._progress.set_show_text(False)
+        self._progress.add_css_class("ih-progress")
 
-        summary_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        summary_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        summary_box.add_css_class("ih-card")
         summary_box.set_margin_start(18)
         summary_box.set_margin_end(18)
         summary_box.set_margin_top(6)
         summary_box.set_margin_bottom(6)
         summary_box.append(self._summary_label)
         summary_box.append(self._progress)
+
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        add_worship = Gtk.Button(label="Tambah ibadah")
+        add_worship.add_css_class("ih-quick")
+        add_worship.connect("clicked", lambda *_: self._on_add_worship())
+        add_habit = Gtk.Button(label="Tambah kebiasaan")
+        add_habit.add_css_class("ih-quick")
+        add_habit.connect("clicked", lambda *_: self._on_add_habit())
+        actions.append(add_worship)
+        actions.append(add_habit)
+        summary_box.append(actions)
         self.append(summary_box)
 
         self._content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        list_title = Gtk.Label(label="Ibadah & kebiasaan")
+        list_title.set_xalign(0)
+        list_title.set_margin_start(18)
+        list_title.set_margin_top(6)
+        list_title.add_css_class("ih-section-title")
+        self._content_box.append(list_title)
+
         self._list_holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self._content_box.append(self._list_holder)
         self._content_box.append(self._build_daily_note_card())
@@ -258,7 +280,7 @@ class TodayPage(Gtk.Box):
 
         title = Gtk.Label(label="Catatan harian")
         title.set_xalign(0)
-        title.add_css_class("dim-label")
+        title.add_css_class("ih-section-title")
         hint = Gtk.Label(label="Tulis hal singkat tentang hari ini; tersimpan otomatis.")
         hint.set_xalign(0)
         hint.add_css_class("dim-label")
@@ -276,7 +298,7 @@ class TodayPage(Gtk.Box):
 
         self._note_status = Gtk.Label(label="Tersimpan otomatis")
         self._note_status.set_xalign(0)
-        self._note_status.add_css_class("dim-label")
+        self._note_status.add_css_class("ih-hint")
 
         card.append(title)
         card.append(hint)
@@ -404,14 +426,22 @@ class TodayPage(Gtk.Box):
         self._clear_container(self._list_holder)
         if not active:
             empty = Adw.StatusPage(
-                title="Belum ada ibadah",
-                description="Tambahkan ibadah untuk mulai mencatat hari ini.",
+                title="Belum ada ibadah atau kebiasaan",
+                description=(
+                    "Tambahkan ibadah atau kebiasaan untuk mulai mencatat hari ini."
+                ),
                 icon_name="view-list-symbolic",
             )
-            button = Gtk.Button(label="Tambah ibadah")
-            button.add_css_class("suggested-action")
-            button.connect("clicked", lambda *_: self._on_add_worship())
-            empty.set_child(button)
+            actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            actions.set_halign(Gtk.Align.CENTER)
+            add_worship = Gtk.Button(label="Tambah ibadah")
+            add_worship.add_css_class("suggested-action")
+            add_worship.connect("clicked", lambda *_: self._on_add_worship())
+            add_habit = Gtk.Button(label="Tambah kebiasaan")
+            add_habit.connect("clicked", lambda *_: self._on_add_habit())
+            actions.append(add_worship)
+            actions.append(add_habit)
+            empty.set_child(actions)
             self._list_holder.append(empty)
             return
 

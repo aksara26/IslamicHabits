@@ -1,9 +1,11 @@
-"""Garis tren tahunan untuk halaman Riwayat.
+"""Garis tren harian, bulanan, dan tahunan untuk halaman Riwayat.
 
-Sesuai keputusan desain: tahunan memakai **garis**, bukan batang dan bukan
-heatmap. Widget ini hanya menggambar; semua angka dihitung oleh
+Sesuai keputusan desain: tren memakai **garis lengkung**, bukan batang dan
+bukan heatmap. Widget ini hanya menggambar; semua angka dihitung oleh
 ``src.logic.statistics``. Alternatif teks dan navigasi keyboard disediakan
-karena garis saja tidak cukup untuk pembaca layar.
+karena garis saja tidak cukup untuk pembaca layar. Sinyal ``point-activated``
+membawa indeks titik (0-based), sedangkan ``month-activated`` dipertahankan
+untuk kompatibilitas tahunan.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ try:
 except ImportError:  # memungkinkan impor langsung saat prototyping
     from src.logic.statistics import YearPoint, describe_completion  # type: ignore[no-redef]
 
-__all__ = ["TrendLine"]
+__all__ = ["MONTH_NAMES", "TrendLine"]
 
 MONTH_NAMES = (
     "Januari",
@@ -45,32 +47,40 @@ ACCENT_GOLD = (0.788, 0.635, 0.294)
 
 
 class TrendLine(Gtk.DrawingArea):
-    """Gtk.DrawingArea + Cairo untuk 12 titik bulanan.
+    """Gtk.DrawingArea + Cairo untuk deret titik harian/bulanan/tahunan.
 
     Sinyal ``month-activated`` membawa nomor bulan (1–12) dan dipancarkan
-    lewat Enter/klik. Bulan tanpa ibadah aktif sengaja dilewati: tidak ada
-    titik, tidak ada garis, dan tidak dibaca sebagai angka nol.
+    lewat Enter/klik. Sinyal ``point-activated`` membawa indeks titik sehingga
+    pemanggil bisa memetakannya ke tanggal. Titik tanpa kegiatan aktif sengaja
+    dilewati: tidak ada titik, tidak ada garis, dan tidak dibaca sebagai nol.
     """
 
     __gtype_name__ = "IslamicHabitsTrendLine"
     __gsignals__ = {
+        "point-activated": (
+            GObject.SignalFlags.RUN_FIRST,
+            None,
+            (GObject.TYPE_INT,),
+        ),
         "month-activated": (
             GObject.SignalFlags.RUN_FIRST,
             None,
             (GObject.TYPE_INT,),
-        )
+        ),
     }
 
     def __init__(self) -> None:
         super().__init__()
         self._points: tuple[YearPoint, ...] = ()
+        self._labels: tuple[str, ...] = MONTH_NAMES
+        self._title = "Garis tren"
         self._selected: int | None = None
 
         self.set_hexpand(True)
-        self.set_content_height(160)
+        self.set_content_height(180)
         self.set_focusable(True)
         self.set_accessible_role(Gtk.AccessibleRole.IMG)
-        self.set_tooltip_text("Garis tren tahunan")
+        self.set_tooltip_text("Garis tren")
 
         # GTK4 memakai set_draw_func, bukan sinyal "draw" seperti GTK3.
         self.set_draw_func(self._on_draw, None)
@@ -87,10 +97,18 @@ class TrendLine(Gtk.DrawingArea):
 
     # -- API publik -----------------------------------------------------
 
-    def set_points(self, points: Sequence[YearPoint]) -> None:
-        """Ganti data 12 titik dan segarkan tampilan."""
+    def set_points(
+        self,
+        points: Sequence[YearPoint],
+        *,
+        labels: Sequence[str] | None = None,
+        title: str | None = None,
+    ) -> None:
+        """Ganti data tren dan segarkan tampilan."""
 
         self._points = tuple(points)
+        self._labels = tuple(labels) if labels is not None else MONTH_NAMES
+        self._title = title or "Garis tren"
         self._selected = next(
             (index for index, point in enumerate(self._points) if point.has_data),
             None,
@@ -103,10 +121,10 @@ class TrendLine(Gtk.DrawingArea):
     def _geometry(self) -> tuple[float, float, float, float]:
         width = max(float(self.get_width()), 1.0)
         height = max(float(self.get_height()), 1.0)
-        padding = 18.0
+        padding = 20.0
         count = max(len(self._points), 1)
         step = (width - 2 * padding) / max(count - 1, 1)
-        plot_height = max(height - 2 * padding, 1.0)
+        plot_height = max(height - 2 * padding - 12, 1.0)
         return width, padding, step, plot_height
 
     def _position(self, index: int) -> tuple[float, float]:
@@ -125,7 +143,49 @@ class TrendLine(Gtk.DrawingArea):
             return None
         return index
 
+    def _segments(self) -> list[list[int]]:
+        """Kelompokkan titik bersambung yang punya data."""
+
+        segments: list[list[int]] = []
+        current: list[int] = []
+        for index, point in enumerate(self._points):
+            if point.has_data:
+                current.append(index)
+            elif current:
+                segments.append(current)
+                current = []
+        if current:
+            segments.append(current)
+        return segments
+
     # -- Menggambar ------------------------------------------------------
+
+    def _trace(
+        self, cr: cairo.Context, segment: list[int], *, close_to_baseline: bool
+    ) -> None:
+        """Gambar satu ruas lengkung; opsional tutup ke garis dasar."""
+
+        if not segment:
+            return
+        first_x, first_y = self._position(segment[0])
+        _, padding, _, plot_height = self._geometry()
+        baseline = padding + plot_height
+        if close_to_baseline:
+            cr.move_to(first_x, baseline)
+            cr.line_to(first_x, first_y)
+        else:
+            cr.move_to(first_x, first_y)
+
+        previous_x, previous_y = first_x, first_y
+        for index in segment[1:]:
+            x, y = self._position(index)
+            middle = (previous_x + x) / 2
+            cr.curve_to(middle, previous_y, middle, y, x, y)
+            previous_x, previous_y = x, y
+
+        if close_to_baseline:
+            cr.line_to(previous_x, baseline)
+            cr.close_path()
 
     def _on_draw(
         self,
@@ -135,33 +195,41 @@ class TrendLine(Gtk.DrawingArea):
         height: int,
         _data: object,
     ) -> None:
-        padding = 18.0
+        del height
+        _, padding, _, plot_height = self._geometry()
+        baseline = padding + plot_height
         color = self.get_color()
 
-        # Garis dasar yang sangat halus.
-        cr.set_source_rgba(color.red, color.green, color.blue, 0.25)
+        # Garis bantu halus memberi skala tanpa mendominasi.
+        cr.set_source_rgba(color.red, color.green, color.blue, 0.14)
         cr.set_line_width(1)
-        cr.move_to(padding, height - padding)
-        cr.line_to(width - padding, height - padding)
-        cr.stroke()
+        for ratio in (0.0, 0.25, 0.5, 0.75, 1.0):
+            y = padding + (1.0 - ratio) * plot_height
+            cr.move_to(padding, y)
+            cr.line_to(width - padding, y)
+            cr.stroke()
 
-        # Garis tren: putus saat ada bulan tanpa data.
-        cr.set_source_rgba(color.red, color.green, color.blue, 1.0)
-        cr.set_line_width(2)
-        pen_down = False
-        for index, point in enumerate(self._points):
-            if not point.has_data:
-                pen_down = False
+        segments = self._segments()
+
+        # Isi tipis di bawah lengkung supaya tren mudah dipindai.
+        for segment in segments:
+            if len(segment) < 2:
                 continue
-            x, y = self._position(index)
-            if pen_down:
-                cr.line_to(x, y)
-            else:
-                cr.move_to(x, y)
-                pen_down = True
-        cr.stroke()
+            self._trace(cr, segment, close_to_baseline=True)
+            cr.set_source_rgba(color.red, color.green, color.blue, 0.09)
+            cr.fill()
 
-        # Titik bulan.
+        # Lengkung utama: putus saat ada titik tanpa data.
+        cr.set_source_rgba(color.red, color.green, color.blue, 1.0)
+        cr.set_line_width(2.5)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        for segment in segments:
+            if len(segment) < 2:
+                continue
+            self._trace(cr, segment, close_to_baseline=False)
+            cr.stroke()
+
+        # Penanda titik.
         for index, point in enumerate(self._points):
             if not point.has_data:
                 continue
@@ -171,10 +239,31 @@ class TrendLine(Gtk.DrawingArea):
             cr.fill()
 
             if index == self._selected:
-                cr.set_source_rgba(color.red, color.green, color.blue, 0.85)
+                cr.set_source_rgba(color.red, color.green, color.blue, 0.9)
                 cr.set_line_width(1.5)
-                cr.arc(x, y, 7, 0, 2 * 3.141592653589793)
+                cr.arc(x, y, 7.5, 0, 2 * 3.141592653589793)
                 cr.stroke()
+
+                cr.set_source_rgba(color.red, color.green, color.blue, 0.35)
+                cr.set_line_width(1)
+                cr.set_dash([3, 4], 0)
+                cr.move_to(x, y + 8)
+                cr.line_to(x, baseline)
+                cr.stroke()
+                cr.set_dash([], 0)
+
+        # Label sumbu hanya untuk 12 titik agar tidak bertumpuk.
+        if len(self._points) <= 12:
+            cr.set_source_rgba(color.red, color.green, color.blue, 0.75)
+            cr.select_font_face(
+                "Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL
+            )
+            cr.set_font_size(10)
+            for index, label in enumerate(self._labels[: len(self._points)]):
+                x, _ = self._position(index)
+                extents = cr.text_extents(label[:3])
+                cr.move_to(x - extents.width / 2, baseline + 14)
+                cr.show_text(label[:3])
 
     # -- Interaksi -------------------------------------------------------
 
@@ -190,6 +279,7 @@ class TrendLine(Gtk.DrawingArea):
             return True
         if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
             if self._selected is not None:
+                self.emit("point-activated", self._selected)
                 self.emit("month-activated", self._selected + 1)
             return True
         return False
@@ -207,6 +297,7 @@ class TrendLine(Gtk.DrawingArea):
             return
         self._selected = index
         self.queue_draw()
+        self.emit("point-activated", index)
         self.emit("month-activated", index + 1)
 
     def _move_selection(self, direction: int) -> None:
@@ -225,15 +316,18 @@ class TrendLine(Gtk.DrawingArea):
     def _update_accessible(self) -> None:
         total_completed = sum(point.completed_days for point in self._points)
         total_expected = sum(point.expected_days for point in self._points)
-        lines = ["Garis tren tahunan: " + describe_completion(total_completed, total_expected)]
+        lines = [
+            self._title + ": " + describe_completion(total_completed, total_expected)
+        ]
 
         for index, point in enumerate(self._points):
-            label = MONTH_NAMES[index] if index < len(MONTH_NAMES) else f"Bulan {index + 1}"
+            label = self._labels[index] if index < len(self._labels) else f"Titik {index + 1}"
             if point.has_data:
                 detail = describe_completion(point.completed_days, point.expected_days)
             else:
-                detail = "tidak ada ibadah aktif"
-            lines.append(f"{label}: {detail}")
+                detail = "tidak ada kegiatan aktif"
+            if index < 12 or index == len(self._points) - 1:
+                lines.append(f"{label}: {detail}")
 
         text = "\n".join(lines)
         self.set_tooltip_text(text)

@@ -1,11 +1,11 @@
-"""Halaman Riwayat: tampilan harian dan tahunan.
+"""Halaman Riwayat: tren harian, bulanan, dan tahunan.
 
-Kalender bulanan sudah dipindah ke halaman tersendiri (``CalendarPage``).
-Klik bulan pada garis tren tahunan membuka Kalender lewat callback, bukan
-lagi mengganti mode di halaman ini.
+Kalender bulanan tetap punya halaman tersendiri (``CalendarPage``). Klik bulan
+pada garis tren tahunan membuka Kalender lewat callback. Mode Bulanan di sini
+adalah statistik per hari dalam satu bulan, bukan pengganti Kalender.
 
-Penanda hari memakai simbol dan teks, bukan warna saja. Garis tahunan memakai
-``TrendLine`` yang sudah ada, dengan alternatif teks 12 bulan di bawahnya.
+Penanda hari memakai simbol dan teks, bukan warna saja. Setiap garis memakai
+``TrendLine`` dengan alternatif teks agar tetap bisa dibaca pembaca layar.
 """
 
 from __future__ import annotations
@@ -25,12 +25,16 @@ from ..logic.statistics import (
     DayState,
     Worship,
     compute_daily,
+    compute_day_series,
+    compute_month_series,
     compute_yearly_series,
     describe_completion,
+    describe_daily_completion,
 )
 from .a11y import set_accessible_label
 from .history_common import (
     ALL_FILTER,
+    BULAN,
     STATE_SYMBOL,
     STATE_TEXT,
     FilterKey,
@@ -40,6 +44,8 @@ from .history_common import (
     clear_list,
     format_day,
     format_entry_detail,
+    last_day,
+    shift_month,
     shift_year,
 )
 from .trend_line import MONTH_NAMES, TrendLine
@@ -50,7 +56,7 @@ OpenCalendarCallback = Callable[[date], None]
 
 
 class HistoryPage(Gtk.Box):
-    """Riwayat dengan pengalih Harian/Tahunan."""
+    """Riwayat dengan pengalih Harian/Bulanan/Tahunan."""
 
     def __init__(
         self,
@@ -68,7 +74,7 @@ class HistoryPage(Gtk.Box):
 
         self._mode = "day"
         self._day = date.today()
-        self._anchor = date.today()  # dipakai Tahunan
+        self._anchor = date.today()  # dipakai Bulanan dan Tahunan
         self._filter_key: FilterKey = ALL_FILTER
         self._filter_keys: list[FilterKey] = [ALL_FILTER]
         self._show_archived = False
@@ -82,7 +88,11 @@ class HistoryPage(Gtk.Box):
 
     def _build_controls(self) -> None:
         group = Adw.ToggleGroup()
-        for label, name in (("Harian", "day"), ("Tahunan", "year")):
+        for label, name in (
+            ("Harian", "day"),
+            ("Bulanan", "month"),
+            ("Tahunan", "year"),
+        ):
             group.add(Adw.Toggle(label=label, name=name))
         group.set_active_name("day")
         group.connect("notify::active-name", self._on_mode_changed)
@@ -131,14 +141,18 @@ class HistoryPage(Gtk.Box):
         filters.append(self._filter_dropdown)
 
         archive = Gtk.CheckButton(label="Tampilkan arsip")
-        archive.set_tooltip_text("Sertakan ibadah yang sudah diarsipkan")
+        archive.set_tooltip_text(
+            "Sertakan ibadah dan kebiasaan yang sudah diarsipkan"
+        )
         archive.connect("toggled", self._on_archive_toggled)
         filters.append(archive)
 
         help_label = Gtk.Label(label="Simbol: ○ kosong · ◐ sebagian · ● penuh")
         help_label.set_hexpand(True)
         help_label.set_xalign(1)
-        help_label.add_css_class("dim-label")
+        help_label.set_wrap(True)
+        help_label.set_max_width_chars(24)
+        help_label.add_css_class("ih-hint")
         filters.append(help_label)
         self.append(filters)
 
@@ -147,6 +161,7 @@ class HistoryPage(Gtk.Box):
         self._views.set_hexpand(True)
         self._views.set_vexpand(True)
         self._views.add_named(self._build_day_view(), "day")
+        self._views.add_named(self._build_month_view(), "month")
         self._views.add_named(self._build_year_view(), "year")
         self._views.set_visible_child_name("day")
 
@@ -154,6 +169,29 @@ class HistoryPage(Gtk.Box):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_child(self._views)
         self.append(scrolled)
+
+    def _trend_card(
+        self, title: str, hint: str, trend: TrendLine
+    ) -> Gtk.Box:
+        """Bungkus garis tren dengan judul dan petunjuk yang konsisten."""
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        card.add_css_class("ih-card")
+
+        heading = Gtk.Label(label=title)
+        heading.set_xalign(0)
+        heading.add_css_class("ih-section-title")
+        card.append(heading)
+
+        trend.add_css_class("ih-tren")
+        card.append(trend)
+
+        note = Gtk.Label(label=hint)
+        note.set_xalign(0)
+        note.set_wrap(True)
+        note.add_css_class("ih-hint")
+        card.append(note)
+        return card
 
     def _build_day_view(self) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -167,6 +205,18 @@ class HistoryPage(Gtk.Box):
         self._day_state.add_css_class("dim-label")
         box.append(self._day_state)
 
+        self._recent_trend = TrendLine()
+        self._recent_trend.connect(
+            "point-activated", self._on_recent_point_activated
+        )
+        box.append(
+            self._trend_card(
+                "Tren 30 hari terakhir",
+                "Klik titik untuk membuka tanggal itu di Hari Ini.",
+                self._recent_trend,
+            )
+        )
+
         self._day_detail = Gtk.ListBox()
         self._day_detail.add_css_class("boxed-list")
         self._day_detail.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -174,7 +224,7 @@ class HistoryPage(Gtk.Box):
 
         note_title = Gtk.Label(label="Catatan harian")
         note_title.set_xalign(0)
-        note_title.add_css_class("dim-label")
+        note_title.add_css_class("ih-section-title")
         box.append(note_title)
         self._day_note_text = Gtk.Label(label="")
         self._day_note_text.set_xalign(0)
@@ -188,6 +238,40 @@ class HistoryPage(Gtk.Box):
         box.append(open_button)
         return box
 
+    def _build_month_view(self) -> Gtk.Box:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        box.set_margin_start(18)
+        box.set_margin_end(18)
+        box.set_margin_top(6)
+        box.set_margin_bottom(18)
+
+        self._month_state = Gtk.Label(label="")
+        self._month_state.set_xalign(0)
+        self._month_state.add_css_class("dim-label")
+        box.append(self._month_state)
+
+        self._month_trend = TrendLine()
+        self._month_trend.connect(
+            "point-activated", self._on_month_point_activated
+        )
+        box.append(
+            self._trend_card(
+                "Tren harian dalam bulan ini",
+                "Satu titik untuk setiap tanggal. Klik untuk membuka hari itu.",
+                self._month_trend,
+            )
+        )
+
+        detail_title = Gtk.Label(label="Rincian per hari")
+        detail_title.set_xalign(0)
+        detail_title.add_css_class("ih-section-title")
+        box.append(detail_title)
+
+        self._month_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self._month_text.add_css_class("dim-label")
+        box.append(self._month_text)
+        return box
+
     def _build_year_view(self) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         box.set_margin_start(18)
@@ -196,8 +280,18 @@ class HistoryPage(Gtk.Box):
         box.set_margin_bottom(18)
 
         self._trend = TrendLine()
-        self._trend.connect("month-activated", self._on_month_activated)
-        box.append(self._trend)
+        box.append(
+            self._trend_card(
+                "Tren tahunan per bulan",
+                "Satu titik untuk setiap bulan. Klik untuk membuka Kalender.",
+                self._trend,
+            )
+        )
+
+        detail_title = Gtk.Label(label="Rincian per bulan")
+        detail_title.set_xalign(0)
+        detail_title.add_css_class("ih-section-title")
+        box.append(detail_title)
 
         self._year_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self._year_text.add_css_class("dim-label")
@@ -228,7 +322,7 @@ class HistoryPage(Gtk.Box):
 
     def _sync_filter_model(self) -> None:
         keys: list[FilterKey] = [ALL_FILTER]
-        labels = ["Semua ibadah"]
+        labels = ["Semua ibadah & kebiasaan"]
         for category in self._repo.list_categories():
             keys.append(("category", category.id))
             labels.append(f"Kategori: {category.name}")
@@ -252,9 +346,9 @@ class HistoryPage(Gtk.Box):
     # -- mode & navigasi -------------------------------------------------
 
     def set_mode(self, mode: str) -> None:
-        """Terima hanya ``day`` dan ``year``; Kalender punya halaman sendiri."""
+        """Terima ``day``, ``month``, dan ``year``."""
 
-        if mode not in {"day", "year"}:
+        if mode not in {"day", "month", "year"}:
             return
         self._mode = mode
         self._toggle.set_active_name(mode)
@@ -264,7 +358,7 @@ class HistoryPage(Gtk.Box):
 
     def _on_mode_changed(self, *_args: object) -> None:
         mode = self._toggle.get_active_name()
-        if mode not in {"day", "year"}:
+        if mode not in {"day", "month", "year"}:
             return
         self._mode = mode
         self._views.set_visible_child_name(mode)
@@ -272,7 +366,7 @@ class HistoryPage(Gtk.Box):
         self.refresh()
 
     def _sync_period_button(self) -> None:
-        labels = {"day": "Hari ini", "year": "Tahun ini"}
+        labels = {"day": "Hari ini", "month": "Bulan ini", "year": "Tahun ini"}
         self._period_button.set_label(labels[self._mode])
 
     def go_current(self) -> None:
@@ -290,6 +384,9 @@ class HistoryPage(Gtk.Box):
         if self._mode == "day":
             self._day += timedelta(days=direction)
             self._anchor = self._day
+        elif self._mode == "month":
+            self._anchor = shift_month(self._anchor, direction)
+            self._day = self._anchor
         else:
             self._anchor = shift_year(self._anchor, direction)
         self.refresh()
@@ -307,6 +404,24 @@ class HistoryPage(Gtk.Box):
         self._sync_filter_model()
         self.refresh()
 
+    def _on_recent_point_activated(
+        self, _widget: TrendLine, index: int
+    ) -> None:
+        """Buka tanggal pada tren 30 hari di Hari Ini."""
+
+        start = self._day - timedelta(days=29)
+        if 0 <= index < 30:
+            self._on_open_day(start + timedelta(days=index))
+
+    def _on_month_point_activated(self, _widget: TrendLine, index: int) -> None:
+        """Buka tanggal pada tren bulanan di Hari Ini."""
+
+        last = last_day(self._anchor.year, self._anchor.month)
+        if 0 <= index < last:
+            day = date(self._anchor.year, self._anchor.month, index + 1)
+            self._day = day
+            self._on_open_day(day)
+
     def _on_month_activated(self, _widget: TrendLine, month: int) -> None:
         """Buka Kalender pada bulan yang dipilih dari tren tahunan."""
 
@@ -320,11 +435,14 @@ class HistoryPage(Gtk.Box):
         self._sync_filter_model()
         titles = {
             "day": format_day(self._day),
+            "month": f"{BULAN[self._anchor.month - 1]} {self._anchor.year}",
             "year": str(self._anchor.year),
         }
         self._title.set_label(titles[self._mode])
         if self._mode == "day":
             self._refresh_day()
+        elif self._mode == "month":
+            self._refresh_month()
         else:
             self._refresh_year()
 
@@ -335,10 +453,25 @@ class HistoryPage(Gtk.Box):
         symbol = STATE_SYMBOL[summary.state]
         self._day_state.set_label(
             f"{symbol} {STATE_TEXT[summary.state]} — "
-            f"Terlaksana {summary.completed} dari {summary.expected} ibadah"
+            + describe_daily_completion(summary.completed, summary.expected)
         )
         apply_state_class(self._day_state, summary.state)
         set_accessible_label(self._day_state, self._day_state.get_label())
+
+        start = self._day - timedelta(days=29)
+        points = compute_day_series(
+            start, self._day, worships, self._entries(start, self._day)
+        )
+        labels: list[str] = []
+        cursor = start
+        while cursor <= self._day:
+            labels.append(f"{cursor.day} {BULAN[cursor.month - 1][:3]}")
+            cursor += timedelta(days=1)
+        self._recent_trend.set_points(
+            points,
+            labels=labels,
+            title=f"Tren 30 hari hingga {format_day(self._day)}",
+        )
 
         note = self._repo.get_daily_note(self._day).text
         self._day_note_text.set_label(note or "Belum ada catatan harian.")
@@ -346,8 +479,10 @@ class HistoryPage(Gtk.Box):
 
         clear_list(self._day_detail)
         if not summary.per_worship:
-            row = Adw.ActionRow(title="Tidak ada ibadah aktif")
-            row.set_subtitle("Tambahkan ibadah atau ubah filter untuk melihat rekap.")
+            row = Adw.ActionRow(title="Tidak ada kegiatan aktif")
+            row.set_subtitle(
+                "Tambahkan ibadah atau kebiasaan, atau ubah filter untuk melihat rekap."
+            )
             self._day_detail.append(row)
             return
 
@@ -372,6 +507,37 @@ class HistoryPage(Gtk.Box):
             row.add_suffix(mark)
             self._day_detail.append(row)
 
+    def _refresh_month(self) -> None:
+        year = self._anchor.year
+        month = self._anchor.month
+        first = date(year, month, 1)
+        last = last_day(year, month)
+        worships = self._worships()
+        points = compute_month_series(
+            year, month, worships, self._entries(first, date(year, month, last))
+        )
+
+        completed = sum(point.completed_days for point in points)
+        expected = sum(point.expected_days for point in points)
+        self._month_state.set_label(describe_completion(completed, expected))
+        set_accessible_label(self._month_state, self._month_state.get_label())
+        self._month_trend.set_points(
+            points,
+            labels=[str(day) for day in range(1, last + 1)],
+            title=f"Tren harian {BULAN[month - 1]} {year}",
+        )
+
+        clear_list(self._month_text)
+        for index, point in enumerate(points):
+            detail = (
+                describe_completion(point.completed_days, point.expected_days)
+                if point.has_data
+                else "tidak ada kegiatan aktif"
+            )
+            row = Gtk.Label(label=f"Hari {index + 1}: {detail}")
+            row.set_xalign(0)
+            self._month_text.append(row)
+
     def _refresh_year(self) -> None:
         clear_list(self._year_text)
         worships = self._worships()
@@ -379,14 +545,18 @@ class HistoryPage(Gtk.Box):
             date(self._anchor.year, 1, 1), date(self._anchor.year, 12, 31)
         )
         points = compute_yearly_series(self._anchor.year, worships, entries)
-        self._trend.set_points(points)
+        self._trend.set_points(
+            points,
+            labels=MONTH_NAMES,
+            title=f"Tren tahunan {self._anchor.year}",
+        )
 
         for point in points:
             label = MONTH_NAMES[point.month - 1]
             detail = (
                 describe_completion(point.completed_days, point.expected_days)
                 if point.has_data
-                else "tidak ada ibadah aktif"
+                else "tidak ada kegiatan aktif"
             )
             row = Gtk.Label(label=f"{label}: {detail}")
             row.set_xalign(0)

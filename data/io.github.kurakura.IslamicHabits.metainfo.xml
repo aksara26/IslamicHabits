@@ -2,12 +2,13 @@
 <component type="desktop-application">
   <id>io.github.kurakura.IslamicHabits</id>
   <name>IslamicHabits</name>
-  <summary>Catat ibadah harian secara lokal</summary>
+  <summary>Catat ibadah dan kebiasaan harian secara lokal</summary>
   <description>
     <p>
-      IslamicHabits membantu mencatat dan merefleksikan ibadah harian secara
-      pribadi. Semua isian dilakukan sendiri oleh pengguna, data tersimpan
-      lokal, tanpa akun dan tanpa server.
+      IslamicHabits membantu mencatat dan merefleksikan ibadah serta kebiasaan
+      harian seperti belajar, baca buku, dan olahraga secara pribadi. Semua isian
+      dilakukan sendiri oleh pengguna, data tersimpan lokal, tanpa akun dan tanpa
+      server. Tren harian, bulanan, dan tahunan dihitung dari catatan yang sama.
     </p>
   </description>
   <launchable type="desktop-id">io.github.kurakura.IslamicHabits.desktop</launchable>
@@ -18,6 +19,17 @@
   </developer>
   <url type="homepage">https://github.com/aksara26/IslamicHabits</url>
   <releases>
+    <release version="0.2.0" date="2026-11-18">
+      <description>
+        <p>
+          Ibadah dan kebiasaan umum kini memakai satu sistem pencatatan dan satu
+          statistik. Riwayat menampilkan tren garis harian, bulanan per hari, dan
+          tahunan per bulan. Tambah kebiasaan cepat tersedia lewat tombol dan
+          pintasan Ctrl+Shift+N. Tampilan kartu, kalender, dan palet sage dirapikan
+          di seluruh halaman.
+        </p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-11-18">
       <description>
         <p>

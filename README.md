@@ -1,8 +1,8 @@
 # IslamicHabits
 
-Aplikasi desktop Linux untuk mencatat ibadah harian secara pribadi. Dibuat untuk penggunaan sendiri, data tersimpan lokal, tanpa akun, tanpa server, dan didistribusikan lewat GitHub.
+Aplikasi desktop Linux untuk mencatat ibadah **dan kebiasaan** harian secara pribadi. Dibuat untuk penggunaan sendiri, data tersimpan lokal, tanpa akun, tanpa server, dan didistribusikan lewat GitHub.
 
-> **Status:** versi 0.1.0 siap untuk uji pakai. Seluruh fitur v1 sudah tersedia: lapisan data SQLite, Hari Ini dengan catatan harian, Kelola Ibadah, Riwayat harian/tahunan, Kalender terpisah dengan detail capaian, Histori Catatan, Muhasabah, statistik, Pengaturan, pengingat popup, aksesibilitas dasar, ekspor/impor/cadangan, serta berkas pengemasan Flatpak dan AppImage. Installer satu perintah dari Releases juga disiapkan. Palet sage kontras dan ikon kubah masjid sudah terpasang. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
+> **Status:** versi 0.2.0 siap untuk uji pakai. Ibadah dan kebiasaan umum (belajar, baca buku, olahraga, dan lain-lain) memakai satu sistem pencatatan dan satu statistik. Tersedia tren garis **harian, bulanan per hari, dan tahunan per bulan**, Hari Ini sebagai ringkasan dengan tombol tambah cepat, Kalender terpisah, Histori Catatan, Muhasabah, Pengaturan, pengingat popup, aksesibilitas dasar, ekspor/impor/cadangan, serta installer satu perintah tanpa `sudo`. Palet sage dan tata letak sudah dirapikan di semua halaman. Uji visual dan penerimaan notifikasi di sesi GNOME 51 nyata tetap disarankan sebelum rilis publik.
 
 > **Panduan instalasi:** [`INSTALL.md`](INSTALL.md). Berkas ini fokus pada fitur, arsitektur, dan perilaku aplikasi.
 
@@ -34,12 +34,12 @@ Aplikasi desktop Linux untuk mencatat ibadah harian secara pribadi. Dibuat untuk
 
 ## 1. Tujuan dan Prinsip
 
-Aplikasi ini membantu pengguna mencatat dan merefleksikan ibadah hariannya (sholat, tilawah, puasa sunnah, dzikir, dan lainnya) dengan cepat dan tenang.
+Aplikasi ini membantu pengguna mencatat dan merefleksikan ibadah hariannya (sholat, tilawah, puasa sunnah, dzikir, dan lainnya) **serta kebiasaan umum** seperti belajar, baca buku, olahraga, jalan kaki, dan tidur awal dengan cepat dan tenang. Keduanya sengaja tidak dibedakan sebagai dua sistem data: satu kegiatan cukup satu catatan per hari dan ikut dihitung di statistik yang sama.
 
 **Prinsip desain:**
 
 1. **Berbasis kesadaran pengguna.** Semua isian dilakukan sendiri oleh pengguna. Aplikasi adalah alat bantu mengingat dan bercermin, bukan pengawas.
-2. **Cepat.** Mencatat satu ibadah cukup satu klik atau satu tombol. Target seluruh pencatatan harian kurang dari 10 detik.
+2. **Cepat.** Mencatat satu kegiatan cukup satu klik atau satu tombol. Target seluruh pencatatan harian kurang dari 10 detik.
 3. **Tenang.** Tidak ada kalimat menghukum ("gagal", "streak putus"), tidak ada warna merah untuk status belum, tidak ada peringkat atau perbandingan.
 4. **Privat dan lokal.** Data hanya ada di komputer pengguna. Tidak ada akun, tidak ada jaringan.
 5. **Mudah dikoreksi.** Salah centang, lupa mengisi kemarin, atau salah hapus harus bisa diperbaiki.
@@ -51,13 +51,14 @@ Aplikasi ini membantu pengguna mencatat dan merefleksikan ibadah hariannya (shol
 
 ### Termasuk (versi pertama)
 
-- Pencatatan ibadah harian: centang, angka, dan status
-- Catatan bebas harian per tanggal, terpisah dari catatan ibadah dan muhasabah
-- Kategori dan pengelolaan ibadah (tambah, ubah, urutkan, arsipkan)
-- Riwayat harian dan tahunan dengan rincian capaian
+- Pencatatan ibadah dan kebiasaan harian: centang, angka, dan status
+- Tambah kebiasaan cepat lewat tombol **Tambah kebiasaan** dengan preset belajar, baca buku, olahraga, jalan kaki, dan tidur awal
+- Catatan bebas harian per tanggal, terpisah dari catatan kegiatan dan muhasabah
+- Kategori dan pengelolaan kegiatan (tambah, ubah, urutkan, arsipkan), termasuk kategori **Kebiasaan**
+- Riwayat dengan tiga tren: harian 30 hari, bulanan per hari, dan tahunan per bulan
 - Kalender bulanan terpisah dengan penanda status dan penanda catatan
-- Histori Catatan berisi catatan harian saja, terpisah dari catatan ibadah dan muhasabah
-- Statistik sederhana per ibadah
+- Histori Catatan berisi catatan harian saja, terpisah dari catatan kegiatan dan muhasabah
+- Statistik yang sama untuk ibadah dan kebiasaan, dihitung sejak tanggal mulai aktif
 - Catatan muhasabah harian
 - Ekspor, impor, dan cadangan data (kompatibel dengan berkas lama)
 - Tema terang dan gelap dengan palet hijau sage
@@ -163,16 +164,16 @@ IslamicHabits/
 │   ├── logic/
 │   │   ├── __init__.py
 │   │   ├── constants.py    # APP_NAME, APP_ID, versi, kunci pengaturan
-│   │   ├── defaults.py     # ibadah bawaan saat basis data dibuat
+│   │   ├── defaults.py     # ibadah & kebiasaan bawaan saat basis data dibuat
 │   │   ├── statistics.py   # aturan harian/bulanan/tahunan, murni Python
-│   │   ├── database.py     # koneksi SQLite, skema, migrasi
+│   │   ├── database.py     # koneksi SQLite, skema, migrasi, seed kebiasaan
 │   │   ├── repository.py   # CRUD tanpa GTK
 │   │   └── transfer.py     # ekspor/impor/cadangan JSON berversi
 │   └── ui/
 │       ├── __init__.py
 │       ├── main_window.py  # navigasi adaptif 7 menu + aksi/pintasan
-│       ├── today_page.py   # halaman Hari Ini
-│       ├── history_page.py # Riwayat Harian/Tahunan
+│       ├── today_page.py   # halaman Hari Ini + tombol tambah cepat
+│       ├── history_page.py # Riwayat Harian/Bulanan/Tahunan
 │       ├── history_common.py  # format tanggal, simbol status, filter bersama
 │       ├── calendar_page.py   # Kalender bulanan (halaman navbar)
 │       ├── note_history_page.py  # Histori Catatan harian
@@ -221,9 +222,9 @@ Tetapkan di awal karena mengubahnya belakangan memengaruhi desktop entry, identi
 
 | Tabel | Isi |
 |---|---|
-| **kategori** | nama, urutan, status lipat |
-| **ibadah** | nama, kategori, tipe isian (centang / angka / status), target, satuan, hari aktif, **`aktif_mulai`**, urutan, status arsip |
-| **catatan** | ibadah, tanggal, nilai atau status, jam pelaksanaan (opsional), catatan teks |
+| **kategori** | nama, urutan, status lipat (termasuk **Kebiasaan**) |
+| **ibadah** | satu tabel untuk ibadah **dan** kebiasaan: nama, kategori, tipe isian (centang / angka / status), target, satuan, hari aktif, **`aktif_mulai`**, urutan, status arsip |
+| **catatan** | kegiatan (ibadah atau kebiasaan), tanggal, nilai atau status, jam pelaksanaan (opsional), catatan teks |
 | **muhasabah** | tanggal, teks, jawaban pertanyaan pemantik |
 | **catatan_harian** | tanggal, catatan bebas untuk hari itu (skema v2) |
 | **pengaturan** | tema, jam pengingat, popup pengingat, preferensi tampilan |
@@ -231,14 +232,14 @@ Tetapkan di awal karena mengubahnya belakangan memengaruhi desktop entry, identi
 
 **Aturan data:**
 
-- **Satu catatan per ibadah per tanggal.**
-- **Satu catatan harian bebas per tanggal**, berbeda dari catatan per ibadah dan dari muhasabah.
+- **Satu catatan per kegiatan (ibadah atau kebiasaan) per tanggal.** Kebiasaan tidak memakai tabel terpisah dan tidak masuk Histori Catatan.
+- **Satu catatan harian bebas per tanggal**, berbeda dari catatan per kegiatan dan dari muhasabah.
 - Statistik **dihitung dari catatan**, tidak disimpan sebagai angka mati. Dengan begitu koreksi data masa lalu tidak merusak hitungan.
-- Ibadah yang dihapus menjadi **arsip**, bukan dihapus fisik, agar riwayat utuh.
+- Kegiatan yang diarsipkan menjadi **arsip**, bukan dihapus fisik, agar riwayat utuh.
 - Tanggal disimpan sebagai tanggal lokal murni (tahun-bulan-hari), tanpa jam.
-- Nomor versi skema disimpan agar pembaruan aplikasi bisa memigrasi data lama. Skema **v2** menambahkan `catatan_harian`; basis data v1 otomatis dimigrasi tanpa menghapus data.
-- `aktif_mulai` dipakai sebagai denominator statistik. Ibadah baru tidak dihitung pada tanggal sebelum ia ditambahkan, agar riwayat lama tidak terasa menghukum.
-- Ibadah arsip tetap disimpan dan boleh ikut statistik lewat toggle "Tampilkan arsip".
+- Nomor versi skema tetap **v2**; basis data lama otomatis mendapat kategori dan lima kebiasaan bawaan tanpa kehilangan data.
+- `aktif_mulai` dipakai sebagai denominator statistik. Kegiatan baru tidak dihitung pada tanggal sebelum ia ditambahkan, agar riwayat lama tidak terasa menghukum.
+- Kegiatan arsip tetap disimpan dan boleh ikut statistik lewat toggle "Tampilkan arsip".
 
 ### Definisi "terlaksana"
 
@@ -248,9 +249,9 @@ Tetapkan di awal karena mengubahnya belakangan memengaruhi desktop entry, identi
 | Angka | `nilai >= target` | Target kosong/0 → cukup `nilai > 0`; yang belum capai target disebut **sebagian** |
 | Status | semua kecuali `belum` | `qadha` tetap terhitung sebagai catatan jujur |
 
-Penanda harian: **kosong** (tidak ada catatan), **sebagian** (ada catatan tapi belum lengkap), **penuh** (semua ibadah aktif terlaksana). Statistik tidak memakai kata "gagal" dan tidak menampilkan streak.
+Penanda harian: **kosong** (tidak ada catatan), **sebagian** (ada catatan tapi belum lengkap), **penuh** (semua kegiatan aktif terlaksana). Statistik tidak memakai kata "gagal" dan tidak menampilkan streak.
 
-### Daftar ibadah bawaan (bisa diubah pengguna)
+### Daftar kegiatan bawaan (bisa diubah pengguna)
 
 | Kategori | Contoh |
 |---|---|
@@ -260,7 +261,9 @@ Penanda harian: **kosong** (tidak ada catatan), **sebagian** (ada catatan tapi b
 | Dzikir | Pagi, petang, setelah sholat |
 | Puasa sunnah | Senin-Kamis |
 | Amal | Sedekah, silaturahmi |
-| Pribadi | Kebiasaan buatan sendiri |
+| Kebiasaan | Belajar (30 menit), Baca buku (10 halaman), Olahraga, Jalan kaki (20 menit), Tidur awal |
+
+Lima kebiasaan di atas dibuat otomatis pada kategori **Kebiasaan**, baik untuk basis data baru maupun saat memperbarui basis data lama. Tombol **Tambah kebiasaan** menyediakan preset yang sama dan tetap bisa diubah nama, target, satuan, serta hari aktifnya.
 
 ### Tipe isian
 
@@ -313,10 +316,10 @@ Peluncuran
 
 ### Alur pengguna utama
 
-1. **Pertama kali:** pengenalan, pilih ibadah awal, masuk ke Hari Ini.
-2. **Harian:** buka aplikasi, centang ibadah, selesai.
+1. **Pertama kali:** pengenalan, lalu masuk ke Hari Ini dengan ibadah dan kebiasaan bawaan.
+2. **Harian:** buka aplikasi, centang ibadah dan kebiasaan, selesai.
 3. **Malam:** lengkapi yang tertinggal, tulis catatan harian dan muhasabah bila mau.
-4. **Berkala:** buka Riwayat, Kalender, atau Histori Catatan untuk melihat gambaran, lalu lakukan cadangan.
+4. **Berkala:** buka Riwayat untuk tren, Kalender atau Histori Catatan untuk rincian, lalu lakukan cadangan.
 
 ---
 
@@ -325,7 +328,7 @@ Peluncuran
 ### 8.1 Pengenalan (sekali saja)
 
 - Sambutan singkat dan penjelasan prinsip: pencatatan jujur oleh diri sendiri, data lokal, tanpa akun
-- Ibadah bawaan sudah disiapkan saat basis data pertama kali dibuat; pengguna bisa mengubahnya lewat Kelola Ibadah
+- Ibadah dan kebiasaan bawaan sudah disiapkan saat basis data pertama kali dibuat; pengguna bisa mengubahnya lewat Kelola Ibadah
 - Tidak meminta data pribadi; status "pengenalan selesai" disimpan di tabel `meta`
 - Selesai langsung menuju Hari Ini
 
@@ -336,8 +339,8 @@ Peluncuran
 **Komponen:**
 
 - Header tanggal dengan tombol hari sebelumnya, berikutnya, dan kembali ke hari ini
-- Ringkasan progres berupa kalimat netral dan bilah halus
-- Daftar ibadah dikelompokkan per kategori, tiap kelompok bisa dilipat
+- Ringkasan progres berupa kalimat netral dan bilah halus, dengan tombol **Tambah ibadah** dan **Tambah kebiasaan**
+- Daftar ibadah **dan kebiasaan** dikelompokkan per kategori, tiap kelompok bisa dilipat
 - Kartu **Catatan harian** di bawah daftar: teks bebas per tanggal dengan simpan otomatis setelah jeda singkat; catatan ikut tersimpan saat pindah tanggal
 
 **Perilaku per jenis baris:**
@@ -347,34 +350,37 @@ Peluncuran
 - **Status**: klik membuka pilihan kecil (belum, tepat waktu, terlambat, berjamaah, qadha)
 - **Aksi sekunder** (detail, catatan): muncul saat kursor di atas baris, dan selalu tersedia lewat keyboard
 
-**Panel detail ibadah:** panel samping atau jendela kecil berisi status, jam pelaksanaan (opsional, boleh kosong), dan catatan. Tidak berpindah halaman agar konteks tidak hilang.
+**Panel detail kegiatan:** panel samping atau jendela kecil berisi status, jam pelaksanaan (opsional, boleh kosong), dan catatan. Tidak berpindah halaman agar konteks tidak hilang.
 
 **Kondisi khusus:**
 
 | Kondisi | Perilaku |
 |---|---|
-| Tidak ada ibadah aktif | Pesan ramah dan tombol tambah |
+| Tidak ada ibadah atau kebiasaan aktif | Pesan ramah dan dua tombol tambah |
 | Hari lampau | Tampil sama, dengan penanda lembut bahwa sedang mengisi hari lampau |
 | Hari depan | Boleh dilihat, pencatatan dibatasi |
 | Pergantian hari saat aplikasi terbuka | Tawarkan beralih ke hari baru, jangan mengubah tampilan tiba-tiba |
 
 ### 8.3 Riwayat
 
-Halaman ini punya switcher **Harian / Tahunan** (`Ctrl+1` / `Ctrl+3`). Kalender bukan lagi mode di sini, melainkan menu navbar tersendiri.
+Halaman ini punya switcher **Harian / Bulanan / Tahunan**. Kalender bukan mode di sini, melainkan menu navbar tersendiri (`Ctrl+2`).
 
-- **Harian**: rekap satu tanggal; penanda `○` kosong, `◐` sebagian, dan `●` penuh **tidak bergantung warna saja**. Setiap ibadah menampilkan status, jam, nilai/target, dan catatan ibadah bila ada. Di bawahnya tampil **catatan harian** tanggal itu. Tombol "Lihat dan isi di Hari Ini" membuka tanggal yang sama untuk dikoreksi.
-- **Tahunan**: **garis tren 12 titik (Jan–Des)** — bukan batang, bukan heatmap. Titik yang tidak punya ibadah aktif sengaja putus, bukan angka 0. Klik titik/bulan untuk membuka halaman **Kalender** pada bulan itu (`Ctrl+2`).
-- Filter per ibadah atau kategori, dengan toggle "Tampilkan arsip".
+- **Harian** (`Ctrl+1`): rekap satu tanggal; penanda `○` kosong, `◐` sebagian, dan `●` penuh **tidak bergantung warna saja**. Setiap kegiatan menampilkan status, jam, nilai/target, dan catatan bila ada. Di bawahnya tampil **catatan harian** tanggal itu. Tombol "Lihat dan isi di Hari Ini" membuka tanggal yang sama untuk dikoreksi.
+- **Harian — tren 30 hari**: garis lengkung untuk 30 tanggal terakhir. Klik titik untuk membuka tanggal itu di Hari Ini.
+- **Bulanan**: garis tren **per hari dalam satu bulan** (satu titik untuk setiap tanggal) plus rincian "Hari 1 … 31". Ini statistik, bukan pengganti Kalender.
+- **Tahunan** (`Ctrl+3`): garis tren **12 titik (Jan–Des)** — bukan batang, bukan heatmap. Titik yang tidak punya kegiatan aktif sengaja putus, bukan angka 0. Klik titik/bulan untuk membuka halaman **Kalender** pada bulan itu.
+- Filter per kegiatan atau kategori, dengan toggle "Tampilkan arsip".
 - Bahasa netral: "Terlaksana 18 dari 30 hari", bukan "gagal".
-- Alternatif teks 12 bulan dan navigasi panah kiri/kanan + Enter disediakan untuk garis tahunan.
+- Semua garis memakai satu widget `TrendLine` dengan alternatif teks dan navigasi panah kiri/kanan + Enter. Label sumbu ditampilkan untuk 12 titik agar tidak bertumpuk.
 
 ### 8.4 Kalender
 
 Menu navbar tersendiri (`Ctrl+2`), hasil pemindahan dari mode bulanan Riwayat — bukan halaman duplikat.
 
-- Kalender bulan berisi penanda status tiap hari, tanda `✎` bila hari itu punya catatan harian, panel **detail hari terpilih** berisi capaian per ibadah dan catatan hari itu, lalu ringkasan per ibadah untuk sebulan, mis. "Tilawah: 18 dari 30 hari aktif".
+- Kalender bulan berisi penanda status tiap hari, tanda `✎` bila hari itu punya catatan harian, panel **detail hari terpilih** berisi capaian per kegiatan dan catatan hari itu, lalu **ringkasan per kegiatan** untuk sebulan, mis. "Tilawah: 18 dari 30 hari aktif".
 - Klik sebuah tanggal untuk memperbarui panel detail; tombol **Isi hari ini di Hari Ini** membuka tanggal itu untuk dikoreksi.
-- Filter per ibadah/kategori dan toggle "Tampilkan arsip" memakai helper yang sama dengan Riwayat, sehingga simbol dan formatnya konsisten.
+- Filter per kegiatan/kategori dan toggle "Tampilkan arsip" memakai helper yang sama dengan Riwayat, sehingga simbol dan formatnya konsisten.
+- Sel hari diberi kartu lembut dan hari terpilih ditandai dengan latar sage, tetap disertai teks status.
 
 ### 8.5 Histori Catatan
 
@@ -383,7 +389,7 @@ Menu navbar tersendiri (`Ctrl+4`) yang **hanya menampilkan catatan harian bebas*
 - Daftar catatan diurutkan dari tanggal terbaru, dengan pencarian teks dan tanggal
 - Pratinjau satu catatan yang dipilih; Enter atau klik baris membuka tanggal itu di Hari Ini
 - Halaman kosong yang ramah bila belum ada catatan atau tidak ada hasil pencarian
-- Catatan ibadah tetap berada di Riwayat/Kalender; muhasabah tetap berada di halaman Muhasabah
+- Catatan per kegiatan tetap berada di Riwayat/Kalender; muhasabah tetap berada di halaman Muhasabah
 
 ### 8.6 Muhasabah
 
@@ -396,9 +402,12 @@ Halaman ini berisi refleksi terpandu dengan pertanyaan pemantik, berbeda dari **
 
 ### 8.7 Kelola Ibadah
 
-- Daftar ibadah dengan seret untuk mengurutkan
-- Formulir tambah dan ubah: nama, kategori, tipe isian, target, hari aktif
-- Arsipkan (bukan hapus), dengan halaman terpisah untuk melihat dan memulihkan arsip
+Label navbar tetap **Kelola Ibadah**, tetapi halaman ini mengelola ibadah **dan kebiasaan** dalam satu daftar.
+
+- Daftar kegiatan dikelompokkan menurut kategori, dengan seret untuk mengurutkan
+- Tombol **Tambah ibadah** dan **Tambah kebiasaan**; yang terakhir memakai preset belajar, baca buku, olahraga, jalan kaki, dan tidur awal
+- Formulir tambah dan ubah: nama, kategori, tipe isian, target, hari aktif, dan tanggal mulai aktif
+- Arsipkan (bukan hapus), lalu lihat dan pulihkan lewat toggle "Tampilkan arsip"
 - Hapus permanen hanya lewat konfirmasi tegas karena riwayatnya ikut hilang
 
 ### 8.8 Pengaturan
@@ -414,23 +423,23 @@ Halaman ini berisi refleksi terpandu dengan pertanyaan pemantik, berbeda dari **
 
 Daftar untuk memperkirakan besar pekerjaan:
 
-1. Jendela utama dan sidebar navigasi
-2. Baris ibadah (tiga varian: centang, angka, status)
+1. Jendela utama dan sidebar tujuh menu
+2. Baris kegiatan (tiga varian: centang, angka, status) untuk ibadah maupun kebiasaan
 3. Kepala kelompok yang bisa dilipat
-4. Panel detail ibadah
-5. Kartu catatan harian dengan simpan otomatis
-6. Kalender bulanan dengan penanda status dan penanda catatan
-7. Panel detail hari terpilih di Kalender
-8. Halaman Histori Catatan dengan pencarian dan pratinjau
-9. Kartu statistik
+4. Kartu ringkasan dengan bilah progres dan dua tombol tambah cepat
+5. Panel detail kegiatan
+6. Kartu catatan harian dengan simpan otomatis
+7. Kalender bulanan dengan penanda status dan penanda catatan
+8. Panel detail hari terpilih di Kalender
+9. Halaman Histori Catatan dengan pencarian dan pratinjau
 10. Editor muhasabah
-11. Formulir ibadah
+11. Formulir ibadah/kebiasaan dengan preset kebiasaan
 12. Dialog konfirmasi (hapus, impor yang menimpa data)
 13. Toast singkat berisi tombol "Urungkan"
 14. Popup notifikasi desktop lewat `Gio.Notification`
 15. Halaman kosong dengan pesan ramah
 16. Halaman pengenalan
-17. `TrendLine` — garis tren tahunan (`src/ui/trend_line.py`), dengan alternatif teks dan navigasi keyboard
+17. `TrendLine` — garis tren harian, bulanan, dan tahunan (`src/ui/trend_line.py`), dengan alternatif teks dan navigasi keyboard
 
 > **Catatan versi pustaka:** target pengembangan adalah libadwaita 1.10 (Fedora 45). Cek dokumentasi versi tersebut sebelum memakai suatu komponen, dan hindari komponen yang sudah ditandai usang.
 
@@ -442,24 +451,29 @@ Daftar untuk memperkirakan besar pekerjaan:
 
 | Peran | Tema terang | Hex | Kontras ke latar |
 |---|---|---|---|
-| Utama | Hijau sage gelap | `#2F5142` | 8.27:1 |
-| Aksen | Hijau sage sedang | `#557965` | 4.56:1 |
+| Utama | Hijau sage gelap | `#284A3A` | 9.22:1 |
+| Aksen | Hijau sage sedang | `#466951` | 5.78:1 |
 | Latar | Hampir putih kehijauan | `#F6F8F4` | — |
+| Kartu | Putih bersih | `#FFFFFF` | — |
 | Teks | Hijau sangat gelap | `#1C2B24` | 13.84:1 |
-| Selesai | Hijau daun | `#3F6E55` | 5.50:1 |
-| Belum | Abu kehijauan | `#69746B` | 4.56:1 |
+| Selesai | Hijau daun | `#356044` | 6.76:1 |
+| Belum | Abu kehijauan | `#5D6A61` | 5.31:1 |
+| Titik tren | Emas lembut | `#8A6A26` | 4.71:1 |
 
 | Peran | Tema gelap | Hex | Kontras ke latar |
 |---|---|---|---|
 | Utama | Sage pucat | `#A8C5B2` | 9.49:1 |
-| Aksen | Sage sedang terang | `#8FB6A0` | 7.87:1 |
+| Aksen | Sage sedang terang | `#9CC4AA` | 9.15:1 |
 | Latar | Hijau malam | `#101B15` | — |
+| Kartu | Hijau malam lebih terang | `#1E2F25` | — |
 | Teks | Sage sangat pucat | `#E6F0E8` | 15.13:1 |
 | Selesai | Hijau daun terang | `#87B99A` | 7.93:1 |
-| Belum | Abu hangat | `#98A49B` | 6.82:1 |
+| Belum | Abu hangat | `#A6B3A9` | 8.11:1 |
+| Titik tren | Emas pucat | `#D9B866` | 9.25:1 |
 
-- Hindari merah untuk status belum karena memberi kesan bersalah. Status belum memakai abu kehijauan yang tetap memenuhi kontras 4.5:1 di kedua tema.
-- **Warna terang dipakai pada tema terang; tema gelap memakai varian yang lebih pucat** agar kontras tidak turun. Rasio di atas dihitung dengan rumus kontras WCAG terhadap latar masing-masing.
+- Hindari merah untuk status belum karena memberi kesan bersalah. Status belum memakai abu kehijauan yang tetap memenuhi kontras 4.5:1 di kedua tema, tanpa transparansi.
+- **Warna terang dipakai pada tema terang; tema gelap memakai varian yang lebih pucat** agar kontras tidak turun. Rasio di atas dihitung dengan rumus kontras WCAG terhadap latar masing-masing (`#F6F8F4` dan `#101B15`).
+- Kartu, garis pemisah, teks pendukung, dan tombol cepat memakai variabel tambahan `ih-surface-card`, `ih-line`, `ih-muted`, dan `ih-gold` supaya tata letak konsisten di semua halaman.
 - Sediakan mode terang dan gelap, dan hormati pengaturan sistem.
 - Aturan dan warna terang ada di `data/style.css`; `data/style-dark.css` hanya mengganti definisi warna saat tema gelap aktif. `src/ui/theme.py` menambahkan/mencopot provider gelap mengikuti `Adw.StyleManager`.
 - Penanda tetap memakai simbol dan teks (`○`, `◐`, `●`), bukan warna saja, lewat kelas `.state-kosong`, `.state-sebagian`, dan `.state-penuh`.
@@ -493,6 +507,7 @@ Semua fungsi harus bisa dicapai dengan keyboard, dengan penanda fokus yang jelas
 | Riwayat tahunan | Ctrl+3 |
 | Histori Catatan | Ctrl+4 |
 | Ibadah baru | Ctrl+N |
+| Kebiasaan baru | Ctrl+Shift+N |
 | Cari | Ctrl+F (kontekstual: catatan harian di Histori Catatan, selain itu muhasabah) |
 | Urungkan | Ctrl+Z |
 | Pengaturan | Ctrl+, |
@@ -532,7 +547,7 @@ Fitur inti, bukan pelengkap, karena tidak ada server dan data hanya ada di satu 
 **Keputusan v1:** format ekspor = **JSON berversi** (`islamichabits-export`, `schema_version`, metadata, array per tabel). Versi ekspor dan skema saat ini adalah **2**. Cadangan otomatis **mingguan** ke folder pilihan pengguna, memakai format yang sama.
 
 - **Ekspor** semua data ke satu berkas JSON dengan penanda `islamichabits-export`, `schema_version`, metadata, dan array per tabel, termasuk `catatan_harian`
-- **Impor** dengan pilihan gabungkan atau timpa, disertai pratinjau jumlah ibadah, catatan ibadah, catatan harian, muhasabah, baris baru, dan kunci yang sudah ada
+- **Impor** dengan pilihan gabungkan atau timpa, disertai pratinjau jumlah kegiatan, catatan kegiatan, catatan harian, muhasabah, baris baru, dan kunci yang sudah ada
 - Ekspor lama (v1, tanpa `catatan_harian`) tetap diterima; tabel yang hilang dibaca sebagai array kosong sehingga catatan lokal tidak ikut terhapus
 - **Cadangan otomatis** mingguan ke folder pilihan pengguna; dijalankan sekali saat aplikasi dibuka, dengan tombol "Cadangkan sekarang" sebagai pelengkap
 - **Validasi** berkas impor agar berkas rusak atau versi tidak dikenal tidak merusak data yang ada
@@ -546,8 +561,9 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 - Seluruh fungsi bisa dioperasikan dengan keyboard; pintasan penting tercantum di bagian 11
 - Elemen berikon memakai `Gtk.Accessible.update_property` lewat `src/ui/a11y.py` agar terbaca pembaca layar
-- Garis tren tahunan punya alternatif teks 12 bulan dan navigasi keyboard
+- Garis tren harian, bulanan, dan tahunan punya alternatif teks per titik dan navigasi keyboard (panah kiri/kanan + Enter)
 - Status tidak bergantung warna saja: `○` kosong, `◐` sebagian, `●` penuh, disertai teks
+- Titik tren tanpa kegiatan aktif dilewati dan dibaca sebagai "tidak ada kegiatan aktif", bukan angka nol
 - Ukuran huruf mengikuti pengaturan sistem
 - Area klik cukup besar dan tidak terlalu rapat; rasio kontras sage sudah dihitung (bagian 10), tetapi tetap diverifikasi secara visual pada sesi nyata
 - Hari dengan catatan harian ditandai `✎` di Kalender dan disertai teks "ada catatan harian" pada label pembaca layar, bukan sekadar ikon
@@ -557,11 +573,12 @@ Logika ekspor/impor berada di `src/logic/transfer.py` dan diuji tanpa GTK di `te
 
 ## 15. Pengujian
 
-- **Logika** (statistik, hari aktif, catatan harian, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: **63 pengujian lolos** dengan `python3 -m unittest discover -s tests -q`
-- **Versi skema** divalidasi, termasuk migrasi v1 → v2 yang menambahkan `catatan_harian` tanpa menghapus data lama
+- **Logika** (statistik, hari aktif, kebiasaan, catatan harian, ekspor/impor, cadangan) dan smoke test konstruksi UI diuji tanpa jendela: **66 pengujian lolos** dengan `python3 -m unittest discover -s tests -q`
+- **Versi skema** divalidasi, termasuk migrasi v1 → v2 dan seed kebiasaan bawaan pada basis data lama tanpa menghapus data
+- **Deret tren** diuji untuk 30 hari, per hari dalam bulan, dan per bulan dalam tahun, memakai `aktif_mulai` sebagai denominator
 - **Ekspor/impor** diuji untuk tabel baru, pratinjau, dan kompatibilitas berkas v1 yang tidak memiliki `catatan_harian`
 - **Kontras palet** diuji dari berkas CSS dengan rumus WCAG; status kosong tidak memakai transparansi yang menurunkan kontras
-- **Smoke test UI** mencakup penyimpanan catatan harian, Kalender terpisah yang menampilkan capaian serta catatan hari lampau, Histori Catatan yang hanya memuat catatan harian, dan klik tren tahunan yang membuka Kalender
+- **Smoke test UI** mencakup penyimpanan catatan harian, Kalender terpisah, Histori Catatan yang hanya memuat catatan harian, kelima kebiasaan bawaan di Hari Ini, tiga mode Riwayat, dan klik tren tahunan yang membuka Kalender
 - **Kasus tepi:**
   - Pergantian tengah malam saat aplikasi terbuka
   - Mengisi hari lampau dan hari depan
@@ -594,23 +611,27 @@ Cara memasang, menjalankan, memperbarui, dan mencopot aplikasi, serta lokasi dat
 - [x] 2. Siapkan lingkungan pengembangan dan jendela kosong (`Adw.Application` + `Adw.StatusPage`), plus `meson.build`, desktop entry, metadata AppStream, dan ikon
 - [x] 3. Bangun lapisan data dan skema, disertai pengujian
 - [x] 4. Jendela utama dan navigasi
-- [x] 5. Halaman **Hari Ini** dengan tiga jenis baris ibadah
-- [x] 6. **Kelola Ibadah**
-- [x] 7. **Riwayat** harian/tahunan, **Kalender** terpisah di navbar, dan **Histori Catatan**
+- [x] 5. Halaman **Hari Ini** dengan tiga jenis baris kegiatan dan tombol tambah cepat
+- [x] 6. **Kelola Ibadah** untuk ibadah dan kebiasaan dalam satu daftar
+- [x] 7. **Riwayat** harian/bulanan/tahunan, **Kalender** terpisah di navbar, dan **Histori Catatan**
 - [x] 8. **Catatan harian** dan **Muhasabah**
-- [x] 9. Statistik harian / bulanan / tahunan (garis tren)
+- [x] 9. Statistik harian / bulanan / tahunan (satu garis tren generik)
 - [x] 10. **Ekspor, impor, dan cadangan** (skema v2, kompatibel dengan v1)
 - [x] 11. Pengaturan, palet sage terang/gelap, pengingat dengan popup
 - [x] 12. Pengenalan, aksesibilitas, pemolesan
-- [x] 13. Pengemasan dan rilis di GitHub (aset dan workflow sudah disiapkan; unggah rilis dilakukan lewat GitHub)
+- [x] 13. Pengemasan dan rilis `v0.1.0` di GitHub
+- [x] 14. Kebiasaan umum dalam tabel yang sama dengan ibadah, preset, dan seed migrasi
+- [x] 15. Tren bulanan per hari, kartu visual, dan sinkronisasi versi `0.2.0`
 
-**Status akhir:** seluruh langkah 1–13 selesai. 63 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar tujuh menu, Kalender terpisah, Histori Catatan, dan ikon kubah masjid sudah terpasang. Uji visual palet sage serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
+**Status akhir:** seluruh langkah 1–15 selesai di kode. 66 pengujian (logika/data, kontras CSS, dan smoke test UI headless) lolos, dan instalasi Meson berhasil. Navbar tujuh menu, Kalender terpisah, Histori Catatan, dan ikon kubah masjid sudah terpasang. Rilis `v0.1.0` sudah hidup; `v0.2.0` menunggu keputusan untuk ditandai dan dipublikasikan. Uji visual palet sage serta penerimaan popup di sesi GNOME 51 nyata masih disarankan sebelum menandai rilis publik sebagai final.
 
 ---
 
 ## 18. Keputusan yang Masih Terbuka
 
 - [x] Nama, ID, lisensi, format ekspor, dan target v1 sudah diputuskan (lihat bagian 3, 5, 12, 13, 17)
+- [x] Kebiasaan memakai tabel `ibadah` yang sama dengan kategori **Kebiasaan**, bukan tabel atau halaman data terpisah
+- [x] Bulanan di Riwayat adalah tren per hari, sedangkan Kalender tetap halaman navbar tersendiri
 - [ ] Apakah heatmap 365 hari ditambahkan setelah v1 (v1 memakai garis saja)
 - [ ] Dukungan distro/versi GNOME lain setelah v1
 - [ ] Apakah ibadah berbasis tanggal Hijriah masuk, dan dengan sumber apa

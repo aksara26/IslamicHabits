@@ -93,7 +93,7 @@ class MuhasabahPage(Gtk.Box):
 
         title = Gtk.Label(label="Catatan lalu")
         title.set_xalign(0)
-        title.add_css_class("dim-label")
+        title.add_css_class("ih-section-title")
         box.append(title)
 
         self._search_entry = Gtk.SearchEntry()
@@ -143,12 +143,12 @@ class MuhasabahPage(Gtk.Box):
 
         self._save_status = Gtk.Label(label="Tersimpan otomatis")
         self._save_status.set_xalign(0)
-        self._save_status.add_css_class("dim-label")
+        self._save_status.add_css_class("ih-hint")
         box.append(self._save_status)
 
         text_title = Gtk.Label(label="Renungan")
         text_title.set_xalign(0)
-        text_title.add_css_class("dim-label")
+        text_title.add_css_class("ih-section-title")
         box.append(text_title)
 
         self._text_view = Gtk.TextView()
@@ -177,7 +177,7 @@ class MuhasabahPage(Gtk.Box):
 
         answers_title = Gtk.Label(label="Jawaban")
         answers_title.set_xalign(0)
-        answers_title.add_css_class("dim-label")
+        answers_title.add_css_class("ih-section-title")
         box.append(answers_title)
 
         self._answers_view = Gtk.TextView()

@@ -14,7 +14,7 @@ from datetime import date
 from pathlib import Path
 
 from .constants import APP_ID, SCHEMA_VERSION
-from .defaults import DEFAULT_CATEGORIES, DEFAULT_WORSHIPS
+from .defaults import DEFAULT_CATEGORIES, DEFAULT_WORSHIPS, HABIT_CATEGORY
 
 __all__ = [
     "default_data_dir",
@@ -183,6 +183,66 @@ def _seed_defaults(connection: sqlite3.Connection) -> None:
     set_meta(connection, "defaults_seeded", "1")
 
 
+def _seed_habits(connection: sqlite3.Connection) -> None:
+    """Tambahkan kebiasaan bawaan ke basis data yang sudah ada.
+
+    Kebiasaan memakai tabel ``ibadah`` yang sama. Fungsi ini dijaga oleh meta
+    ``habits_seeded`` supaya tidak menggandakan entri milik pengguna.
+    """
+
+    if get_meta(connection, "habits_seeded") == "1":
+        return
+
+    row = connection.execute(
+        "SELECT id FROM kategori WHERE nama = ?", (HABIT_CATEGORY,)
+    ).fetchone()
+    if row is None:
+        order = connection.execute(
+            "SELECT COALESCE(MAX(urutan), -1) + 1 FROM kategori"
+        ).fetchone()[0]
+        cursor = connection.execute(
+            "INSERT INTO kategori (nama, urutan) VALUES (?, ?)",
+            (HABIT_CATEGORY, order),
+        )
+        category_id = int(cursor.lastrowid)
+    else:
+        category_id = int(row["id"])
+
+    existing = {
+        str(item["nama"]) for item in connection.execute("SELECT nama FROM ibadah")
+    }
+    order = connection.execute(
+        "SELECT COALESCE(MAX(urutan), -1) + 1 FROM ibadah"
+    ).fetchone()[0]
+    today = date.today().isoformat()
+
+    for item in DEFAULT_WORSHIPS:
+        if item.category != HABIT_CATEGORY or item.name in existing:
+            continue
+        mask = sum(1 << day for day in item.weekdays)
+        connection.execute(
+            """
+            INSERT INTO ibadah
+                (nama, kategori_id, jenis, target, satuan, hari_aktif,
+                 aktif_mulai, urutan)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                item.name,
+                category_id,
+                item.kind.value,
+                item.target,
+                item.unit,
+                mask,
+                today,
+                order,
+            ),
+        )
+        order += 1
+
+    set_meta(connection, "habits_seeded", "1")
+
+
 def initialize(connection: sqlite3.Connection, *, seed: bool = True) -> None:
     """Buat atau migrasi skema. Aman dipanggil berulang kali."""
 
@@ -204,6 +264,7 @@ def initialize(connection: sqlite3.Connection, *, seed: bool = True) -> None:
 
     if seed:
         _seed_defaults(connection)
+        _seed_habits(connection)
     connection.commit()
 
 

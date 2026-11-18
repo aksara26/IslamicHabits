@@ -67,6 +67,7 @@ class IslamicHabitsApplication(Adw.Application):
         self.set_accels_for_action("win.go-note-history", ["<Ctrl>4"])
         self.set_accels_for_action("win.go-settings", ["<Ctrl>comma"])
         self.set_accels_for_action("win.new-worship", ["<Ctrl>N"])
+        self.set_accels_for_action("win.new-habit", ["<Ctrl><Shift>N"])
         self.set_accels_for_action("win.search", ["<Ctrl>F"])
         self.set_accels_for_action("win.undo", ["<Ctrl>Z"])
         self.set_accels_for_action("win.shortcuts", ["<Ctrl>question"])

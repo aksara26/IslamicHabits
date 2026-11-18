@@ -121,7 +121,7 @@ class UiSmokeTests(unittest.TestCase):
 
         self.assertEqual(calendar._calendar_selected, day)
         self.assertIn(
-            "Terlaksana 1 dari 1 ibadah",
+            "Terlaksana 1 dari 1 kegiatan",
             calendar._calendar_detail_state.get_label(),
         )
         self.assertIn("●", calendar._calendar_detail_state.get_label())
@@ -167,7 +167,7 @@ class UiSmokeTests(unittest.TestCase):
         page._notes_list.emit("row-activated", row)
         self.assertEqual(opened, [day])
 
-    def test_riwayat_tidak_lagi_memilih_mode_kalender(self) -> None:
+    def test_riwayat_memiliki_tiga_mode_tren(self) -> None:
         opened: list[date] = []
         history = HistoryPage(
             self.repo,
@@ -175,12 +175,29 @@ class UiSmokeTests(unittest.TestCase):
             on_open_calendar=opened.append,
             on_toast=self._toast,
         )
-        history.set_mode("month")
-        self.assertEqual(history._views.get_visible_child_name(), "day")
-        self.assertEqual(history._toggle.get_active_name(), "day")
+        for mode in ("day", "month", "year"):
+            history.set_mode(mode)
+            self.assertEqual(history._views.get_visible_child_name(), mode)
+            self.assertEqual(history._toggle.get_active_name(), mode)
 
         history._on_month_activated(None, 3)
         self.assertEqual(opened, [date(history._anchor.year, 3, 1)])
+
+    def test_kebiasaan_bawaan_ikut_tercatat_di_hari_ini(self) -> None:
+        categories = {item.name for item in self.repo.list_categories()}
+        self.assertIn("Kebiasaan", categories)
+
+        names = {item.name for item in self.repo.list_worships()}
+        for habit in ("Belajar", "Baca buku", "Olahraga", "Jalan kaki", "Tidur awal"):
+            self.assertIn(habit, names)
+
+        today = TodayPage(
+            self.repo,
+            on_add_worship=lambda: None,
+            on_add_habit=lambda: None,
+            on_data_changed=lambda: None,
+        )
+        self.assertIn("Belajar", [row.worship.name for row in today._rows.values()])
 
     def test_garis_tren_bisa_difokus(self) -> None:
         self.assertTrue(TrendLine().get_focusable())

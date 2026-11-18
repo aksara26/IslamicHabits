@@ -11,6 +11,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gtk
 
+from ..logic.defaults import HABIT_CATEGORY
 from ..logic.repository import Repository, WorshipRecord
 from ..logic.statistics import EntryKind
 from .a11y import set_accessible_label
@@ -32,10 +33,12 @@ class ManagePage(Gtk.Box):
         on_add_worship: AddWorshipCallback,
         on_toast: ToastCallback,
         on_data_changed: DataChangedCallback,
+        on_add_habit: AddWorshipCallback | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._repo = repository
         self._on_add_worship = on_add_worship
+        self._on_add_habit = on_add_habit or on_add_worship
         self._on_toast = on_toast
         self._on_data_changed = on_data_changed
         self._show_archived = False
@@ -44,9 +47,12 @@ class ManagePage(Gtk.Box):
         header_box.set_margin_start(18)
         header_box.set_margin_end(18)
         header_box.set_margin_top(12)
-        label = Gtk.Label(label="Atur ibadah yang tampil di Hari Ini.")
+        label = Gtk.Label(label="Atur ibadah dan kebiasaan yang tampil di Hari Ini.")
         label.set_xalign(0)
         label.set_hexpand(True)
+        label.set_wrap(True)
+        label.set_max_width_chars(32)
+        label.add_css_class("ih-hint")
         header_box.append(label)
 
         archive_toggle = Gtk.CheckButton(label="Tampilkan arsip")
@@ -54,13 +60,19 @@ class ManagePage(Gtk.Box):
         header_box.append(archive_toggle)
         self.append(header_box)
 
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        actions.set_margin_start(18)
+        actions.set_margin_top(6)
         add_button = Gtk.Button(label="Tambah ibadah")
         add_button.add_css_class("suggested-action")
-        add_button.set_halign(Gtk.Align.START)
-        add_button.set_margin_start(18)
-        add_button.set_margin_top(6)
+        add_button.add_css_class("ih-quick")
         add_button.connect("clicked", lambda *_: self._on_add_worship(None))
-        self.append(add_button)
+        habit_button = Gtk.Button(label="Tambah kebiasaan")
+        habit_button.add_css_class("ih-quick")
+        habit_button.connect("clicked", lambda *_: self._on_add_habit(None))
+        actions.append(add_button)
+        actions.append(habit_button)
+        self.append(actions)
 
         self._scrolled = Gtk.ScrolledWindow(vexpand=True)
         self._scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -77,23 +89,61 @@ class ManagePage(Gtk.Box):
         worships = self._repo.list_worships(include_archived=self._show_archived)
         if not worships:
             empty = Adw.StatusPage(
-                title="Belum ada ibadah" if not self._show_archived else "Arsip kosong",
-                description=(
-                    "Tambahkan ibadah pertama Anda."
+                title=(
+                    "Belum ada ibadah atau kebiasaan"
                     if not self._show_archived
-                    else "Belum ada ibadah yang diarsipkan."
+                    else "Arsip kosong"
+                ),
+                description=(
+                    "Tambahkan ibadah atau kebiasaan pertama Anda."
+                    if not self._show_archived
+                    else "Belum ada ibadah atau kebiasaan yang diarsipkan."
                 ),
                 icon_name="view-list-symbolic",
             )
+            actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            actions.set_halign(Gtk.Align.CENTER)
+            add_button = Gtk.Button(label="Tambah ibadah")
+            add_button.add_css_class("suggested-action")
+            add_button.connect("clicked", lambda *_: self._on_add_worship(None))
+            habit_button = Gtk.Button(label="Tambah kebiasaan")
+            habit_button.connect("clicked", lambda *_: self._on_add_habit(None))
+            actions.append(add_button)
+            actions.append(habit_button)
+            if not self._show_archived:
+                empty.set_child(actions)
             self._scrolled.set_child(empty)
             return
 
-        group = Adw.PreferencesGroup()
-        group.set_title("Ibadah" if not self._show_archived else "Arsip ibadah")
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        container.set_margin_start(18)
+        container.set_margin_end(18)
+        container.set_margin_top(6)
+        container.set_margin_bottom(18)
+
         active_ids = [item.id for item in self._repo.list_worships()]
-        for worship in worships:
-            group.add(self._create_row(worship, active_ids))
-        self._scrolled.set_child(group)
+        categories = self._repo.list_categories()
+        ordered_ids = [category.id for category in categories] + [None]
+        for category_id in ordered_ids:
+            items = [item for item in worships if item.category_id == category_id]
+            if not items:
+                continue
+            category = next(
+                (item for item in categories if item.id == category_id), None
+            )
+            title = "Lainnya" if category is None else category.name
+            if self._show_archived:
+                title += " · arsip"
+            group = Adw.PreferencesGroup(title=title)
+            if category is not None and category.name == HABIT_CATEGORY:
+                group.set_description(
+                    "Kebiasaan dihitung bersama ibadah di semua statistik."
+                )
+            for worship in items:
+                group.add(self._create_row(worship, active_ids))
+            container.append(group)
+
+        self._scrolled.set_child(container)
 
     def _create_row(self, worship: WorshipRecord, active_ids: list[int]) -> Adw.ActionRow:
         row = Adw.ActionRow(title=worship.name)

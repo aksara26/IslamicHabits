@@ -10,7 +10,7 @@ from pathlib import Path
 
 from src.logic.constants import APP_ID, SCHEMA_VERSION
 from src.logic.database import connect, default_database_path, default_data_dir, initialize
-from src.logic.defaults import DEFAULT_CATEGORIES, DEFAULT_WORSHIPS
+from src.logic.defaults import DEFAULT_CATEGORIES, DEFAULT_WORSHIPS, HABIT_CATEGORY
 
 TABLES = (
     "meta",
@@ -63,6 +63,48 @@ class DatabaseTests(unittest.TestCase):
 
         initialize(connection)
         self.assertEqual(connection.execute("SELECT COUNT(*) AS n FROM ibadah").fetchone()["n"], len(DEFAULT_WORSHIPS))
+
+    def test_habits_are_added_to_existing_database_without_duplicates(self) -> None:
+        connection = sqlite3.connect(":memory:")
+        connection.row_factory = sqlite3.Row
+        self.addCleanup(connection.close)
+        initialize(connection, seed=False)
+        connection.execute(
+            "INSERT INTO kategori (nama, urutan) VALUES ('Sholat fardhu', 0)"
+        )
+        connection.execute(
+            """
+            INSERT INTO ibadah (nama, jenis, aktif_mulai, urutan)
+            VALUES ('Subuh', 'centang', ?, 0)
+            """,
+            (date.today().isoformat(),),
+        )
+        connection.execute(
+            "INSERT INTO meta (kunci, nilai) VALUES ('defaults_seeded', '1')"
+        )
+        connection.commit()
+
+        initialize(connection)
+        initialize(connection)
+
+        habit_rows = connection.execute(
+            """
+            SELECT i.nama FROM ibadah AS i
+            JOIN kategori AS k ON k.id = i.kategori_id
+            WHERE k.nama = ?
+            """,
+            (HABIT_CATEGORY,),
+        ).fetchall()
+        names = [row["nama"] for row in habit_rows]
+        self.assertIn("Belajar", names)
+        self.assertIn("Baca buku", names)
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(
+            connection.execute(
+                "SELECT COUNT(*) AS n FROM ibadah WHERE nama = 'Subuh'"
+            ).fetchone()["n"],
+            1,
+        )
 
     def test_initialize_without_seed_leaves_tables_empty(self) -> None:
         connection = sqlite3.connect(":memory:")

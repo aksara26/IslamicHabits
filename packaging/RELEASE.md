@@ -16,15 +16,21 @@ meson setup builddir
 meson test -C builddir
 ```
 
-Bila rilis ini mengubah skema atau format ekspor, sebutkan nomor versinya dalam
-catatan rilis. Versi saat ini adalah skema dan ekspor **v2**, yang menambahkan
-tabel `catatan_harian` dan tetap menerima berkas ekspor v1. Sertakan pula
-catatan bahwa popup pengingat memerlukan izin notifikasi sistem, sementara toast
-dalam aplikasi tetap menjadi cadangan. Sebutkan pula perubahan antarmuka pada rilis
-ini: navbar tujuh menu, Kalender terpisah dari Riwayat, halaman Histori Catatan,
-pintasan `Ctrl+4`, dan ikon kubah masjid bergaya sage. Workflow juga mengunggah
-`install.sh`, `SHA256SUMS`, dan ikon SVG supaya pengguna bisa memasang hanya dengan
-satu perintah `curl ... | bash` tanpa `sudo`.
+Rilis **v0.2.0** tidak mengubah nomor skema atau format ekspor: keduanya tetap
+**v2**, yang sudah menerima berkas ekspor v1. Kebiasaan bawaan ditambahkan lewat
+seed migrasi, jadi basis data lama tetap terbaca tanpa konversi manual. Catatan
+rilis v0.2.0 harus menyebutkan:
+
+- ibadah dan kebiasaan umum memakai satu tabel, satu catatan per item per tanggal, dan satu statistik;
+- preset Belajar, Baca buku, Olahraga, Jalan kaki, dan Tidur awal lewat tombol **Tambah kebiasaan** atau `Ctrl+Shift+N`;
+- tren garis harian 30 hari, bulanan per hari, dan tahunan per bulan, dengan klik titik untuk membuka tanggal atau Kalender;
+- kartu ringkasan, penanda kalender, dan palet sage yang dirapikan di semua halaman, dengan teks status pendamping simbol `○`/`◐`/`●`;
+- navbar tetap tujuh menu: **Hari Ini**, **Riwayat**, **Kalender**, **Histori Catatan**, **Muhasabah**, **Kelola Ibadah**, dan **Pengaturan**.
+
+Sertakan pula catatan bahwa popup pengingat memerlukan izin notifikasi sistem,
+sementara toast dalam aplikasi tetap menjadi cadangan. Workflow mengunggah
+`install.sh`, `SHA256SUMS`, dan ikon SVG supaya pengguna bisa memasang atau
+memperbarui hanya dengan satu perintah `curl ... | bash` tanpa `sudo`.
 
 ## 2. Flatpak (utama)
 
@@ -60,7 +66,7 @@ lebih mandiri dan tetap disarankan untuk pengguna GNOME.
 
 ## 4. GitHub Releases
 
-1. Buat tag `v0.1.0` (sesuaikan nomor versi) dan push ke GitHub.
+1. Buat tag `v0.2.0` (sesuaikan nomor versi) dan push ke GitHub.
 2. Workflow `.github/workflows/build.yml` menjalankan tes (termasuk `bash -n
    packaging/install.sh`), membangun AppImage, lalu melampirkan AppImage,
    `install.sh`, `SHA256SUMS`, dan ikon SVG ke rilis tag.

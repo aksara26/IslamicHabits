@@ -5,13 +5,17 @@
  * kontras tetap baik. Penanda status memakai simbol dan teks, bukan warna saja.
  */
 
-@define-color ih-sage #2f5142;
-@define-color ih-accent #557965;
+@define-color ih-sage #284a3a;
+@define-color ih-accent #466951;
 @define-color ih-surface #f6f8f4;
+@define-color ih-surface-card #ffffff;
+@define-color ih-line #d8e2d9;
 @define-color ih-ink #1c2b24;
+@define-color ih-muted #526158;
 @define-color ih-night #101b15;
-@define-color ih-done #3f6e55;
-@define-color ih-pending #69746b;
+@define-color ih-done #356044;
+@define-color ih-pending #5d6a61;
+@define-color ih-gold #8a6a26;
 
 .state-kosong {
   /* Jangan memakai transparansi: itu menurunkan kontras efektif di bawah 4.5:1. */
@@ -20,6 +24,7 @@
 
 .state-sebagian {
   color: @ih-accent;
+  font-weight: 600;
 }
 
 .state-penuh {
@@ -27,10 +32,57 @@
   font-weight: 700;
 }
 
+/* Kartu dipakai untuk ringkasan, grafik, dan catatan supaya blok informasi
+ * mudah dipindai tanpa menambah garis tebal yang mengganggu. */
 .ih-card {
-  background-color: alpha(@ih-surface, 0.45);
+  background-color: @ih-surface-card;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.ih-section-title {
+  color: @ih-sage;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.ih-hint {
+  color: @ih-muted;
+}
+
+.ih-quick {
+  font-weight: 600;
+  min-height: 34px;
+}
+
+.ih-progress {
+  min-height: 8px;
+  border-radius: 4px;
+}
+
+.ih-tren {
+  background-color: @ih-surface-card;
   border-radius: 12px;
-  padding: 12px;
+  min-height: 180px;
+  padding: 6px;
+}
+
+.ih-calendar-grid {
+  background-color: @ih-surface-card;
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.ih-calendar-day {
+  min-width: 44px;
+  min-height: 52px;
+  border-radius: 10px;
+}
+
+.ih-calendar-day.ih-selected {
+  background-color: @ih-sage;
+  color: @ih-surface-card;
+  font-weight: 700;
 }
 
 .ih-accent {

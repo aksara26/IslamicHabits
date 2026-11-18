@@ -6,9 +6,13 @@
  */
 
 @define-color ih-sage #a8c5b2;
-@define-color ih-accent #8fb6a0;
+@define-color ih-accent #9cc4aa;
 @define-color ih-surface #17241c;
+@define-color ih-surface-card #1e2f25;
+@define-color ih-line #33473a;
 @define-color ih-ink #e6f0e8;
+@define-color ih-muted #b4c3b8;
 @define-color ih-night #101b15;
 @define-color ih-done #87b99a;
-@define-color ih-pending #98a49b;
+@define-color ih-pending #a6b3a9;
+@define-color ih-gold #d9b866;

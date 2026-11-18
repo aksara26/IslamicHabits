@@ -60,7 +60,7 @@ class NoteHistoryPage(Gtk.Box):
 
         self._count_label = Gtk.Label(label="")
         self._count_label.set_xalign(0)
-        self._count_label.add_css_class("dim-label")
+        self._count_label.add_css_class("ih-hint")
         controls.append(self._count_label)
         self.append(controls)
 
@@ -82,7 +82,7 @@ class NoteHistoryPage(Gtk.Box):
             title="Belum ada catatan harian",
             description=(
                 "Tulis catatan bebas di halaman Hari Ini. Catatan itu akan "
-                "muncul di sini, terpisah dari catatan ibadah dan muhasabah."
+                "muncul di sini, terpisah dari catatan kegiatan dan muhasabah."
             ),
             icon_name="text-x-generic-symbolic",
         )
@@ -98,7 +98,7 @@ class NoteHistoryPage(Gtk.Box):
 
         title = Gtk.Label(label="Pratinjau catatan")
         title.set_xalign(0)
-        title.add_css_class("dim-label")
+        title.add_css_class("ih-section-title")
         preview.append(title)
 
         self._preview_text = Gtk.Label(label="Pilih satu catatan untuk membacanya.")
@@ -161,7 +161,7 @@ class NoteHistoryPage(Gtk.Box):
                 if query
                 else (
                     "Tulis catatan bebas di halaman Hari Ini. Catatan itu akan "
-                    "muncul di sini, terpisah dari catatan ibadah dan muhasabah."
+                    "muncul di sini, terpisah dari catatan kegiatan dan muhasabah."
                 )
             )
             self._count_label.set_label("Tidak ada catatan")

@@ -20,6 +20,7 @@ from ..logic.constants import (
     SETTING_REMINDER_TIME,
     SETTING_THEME,
 )
+from ..logic.defaults import HABIT_CATEGORY
 from ..logic.repository import Repository
 from .a11y import set_accessible_label
 from .theme import apply_theme
@@ -125,10 +126,15 @@ class MainWindow(Adw.ApplicationWindow):
         content_header.pack_end(search_button)
         self._search_button = search_button
 
-        add_button = Gtk.Button.new_from_icon_name("list-add-symbolic")
-        add_button.set_tooltip_text("Ibadah baru (Ctrl+N)")
-        set_accessible_label(add_button, "Ibadah baru")
-        add_button.connect("clicked", lambda *_: self.open_worship_dialog())
+        add_menu = Gio.Menu()
+        add_menu.append("Ibadah baru", "win.new-worship")
+        add_menu.append("Kebiasaan baru", "win.new-habit")
+        add_button = Gtk.MenuButton(
+            icon_name="list-add-symbolic",
+            menu_model=add_menu,
+            tooltip_text="Tambah ibadah atau kebiasaan (Ctrl+N)",
+        )
+        set_accessible_label(add_button, "Tambah ibadah atau kebiasaan")
         content_header.pack_end(add_button)
 
         self._toast_overlay = Adw.ToastOverlay()
@@ -167,6 +173,7 @@ class MainWindow(Adw.ApplicationWindow):
             "next-day": lambda *_: self._go_to_today(self._today_page.go_next_day),
             "today": lambda *_: self._go_to_today(self._today_page.go_today),
             "new-worship": lambda *_: self.open_worship_dialog(),
+            "new-habit": lambda *_: self.open_habit_dialog(),
             "undo": lambda *_: self.undo(),
             "shortcuts": lambda *_: self._show_shortcuts(),
             "search": lambda *_: self._on_search(),
@@ -182,6 +189,7 @@ class MainWindow(Adw.ApplicationWindow):
         return TodayPage(
             self._repo,
             on_add_worship=lambda: self.open_worship_dialog(),
+            on_add_habit=lambda: self.open_habit_dialog(),
             on_data_changed=self.refresh_history,
         )
 
@@ -224,6 +232,7 @@ class MainWindow(Adw.ApplicationWindow):
         return ManagePage(
             self._repo,
             on_add_worship=self.open_worship_dialog,
+            on_add_habit=self.open_habit_dialog,
             on_toast=self._toast,
             on_data_changed=self.refresh_today_and_history,
         )
@@ -318,21 +327,36 @@ class MainWindow(Adw.ApplicationWindow):
 
     # -- dialog dan notifikasi -------------------------------------------
 
-    def open_worship_dialog(self, worship_id: int | None = None) -> None:
+    def open_worship_dialog(
+        self, worship_id: int | None = None, *, habit: bool = False
+    ) -> None:
         from .worship_dialog import WorshipDialog
 
         worship = None if worship_id is None else self._repo.get_worship(worship_id)
+        is_habit = habit or (
+            worship is not None and worship.category_name == HABIT_CATEGORY
+        )
         dialog = WorshipDialog(
             self._repo,
             self._repo.list_categories(),
             worship=worship,
-            on_saved=self._on_worship_saved,
+            habit=is_habit,
+            on_saved=(
+                lambda item_id: self._on_worship_saved(item_id, habit=is_habit)
+            ),
         )
         dialog.present(self)
 
-    def _on_worship_saved(self, _worship_id: int) -> None:
+    def open_habit_dialog(self, worship_id: int | None = None) -> None:
+        """Buka dialog dengan preset dan kategori Kebiasaan."""
+
+        self.open_worship_dialog(worship_id, habit=True)
+
+    def _on_worship_saved(self, _worship_id: int, *, habit: bool = False) -> None:
         self.refresh_all()
-        self._toast("Ibadah tersimpan", None, None)
+        self._toast(
+            "Kebiasaan tersimpan" if habit else "Ibadah tersimpan", None, None
+        )
 
     def _toast(
         self,
@@ -372,11 +396,12 @@ class MainWindow(Adw.ApplicationWindow):
         dialog = Adw.AlertDialog(
             heading="Selamat datang di IslamicHabits",
             body=(
-                "Catat ibadah sendiri, tanpa pengawas. Data tetap di komputer ini, "
-                "tanpa akun dan tanpa server. Ibadah bawaan sudah disiapkan; "
-                "Anda bisa mengubahnya lewat Kelola Ibadah.\n\n"
-                "Satu ibadah cukup satu catatan per hari. Arsip menyimpan riwayat, "
-                "dan statistik dihitung sejak ibadah mulai aktif."
+                "Catat ibadah dan kebiasaan sendiri, tanpa pengawas. Data tetap di "
+                "komputer ini, tanpa akun dan tanpa server. Ibadah serta kebiasaan "
+                "bawaan seperti belajar dan olahraga sudah disiapkan.\n\n"
+                "Satu kegiatan cukup satu catatan per hari. Arsip menyimpan riwayat, "
+                "dan tren harian, bulanan, serta tahunan dihitung sejak kegiatan "
+                "mulai aktif."
             ),
         )
         dialog.add_response("start", "Mulai mencatat")
@@ -459,9 +484,10 @@ class MainWindow(Adw.ApplicationWindow):
                 ),
             ),
             (
-                "Ibadah",
+                "Ibadah & kebiasaan",
                 (
                     ("Ibadah baru", "<Ctrl>N"),
+                    ("Kebiasaan baru", "<Ctrl><Shift>N"),
                     ("Urungkan", "<Ctrl>Z"),
                     ("Cari", "<Ctrl>F"),
                 ),

@@ -13,6 +13,8 @@ from src.logic.statistics import (
     Worship,
     classify_day,
     compute_daily,
+    compute_day_series,
+    compute_month_series,
     compute_range,
     compute_yearly_series,
     describe_completion,
@@ -155,16 +157,35 @@ class RangeTests(unittest.TestCase):
         self.assertEqual(points[10].month, 11)
         self.assertFalse(points[11].has_data)
 
+    def test_day_and_month_series_memakai_nomor_hari(self) -> None:
+        worship = check_worship(active_from=date(2026, 11, 17))
+        entries = (
+            Entry(1, date(2026, 11, 17), True),
+            Entry(1, date(2026, 11, 18), True),
+        )
+        points = compute_day_series(
+            date(2026, 11, 17), date(2026, 11, 19), (worship,), entries
+        )
+        self.assertEqual([point.month for point in points], [17, 18, 19])
+        self.assertEqual([point.has_data for point in points], [True, True, True])
+        self.assertEqual([point.completed_days for point in points], [1, 1, 0])
+
+        month_points = compute_month_series(2026, 11, (worship,), entries)
+        self.assertEqual(len(month_points), 30)
+        self.assertEqual(month_points[0].month, 1)
+        self.assertFalse(month_points[0].has_data)
+        self.assertTrue(month_points[16].has_data)
+
 
 class LabelTests(unittest.TestCase):
     def test_neutral_wording(self) -> None:
         self.assertEqual(describe_completion(18, 30), "Terlaksana 18 dari 30 hari")
         self.assertEqual(
-            describe_completion(0, 0), "Tidak ada ibadah aktif pada rentang ini"
+            describe_completion(0, 0), "Tidak ada kegiatan aktif pada rentang ini"
         )
-        self.assertEqual(describe_daily_completion(3, 5), "Terlaksana 3 dari 5 ibadah")
+        self.assertEqual(describe_daily_completion(3, 5), "Terlaksana 3 dari 5 kegiatan")
         self.assertEqual(
-            describe_daily_completion(0, 0), "Tidak ada ibadah aktif hari ini"
+            describe_daily_completion(0, 0), "Tidak ada kegiatan aktif hari ini"
         )
 
 

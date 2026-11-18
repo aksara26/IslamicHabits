@@ -23,5 +23,5 @@ SETTING_NICKNAME = "nama_panggilan"
 META_ONBOARDING_DONE = "pengenalan_selesai"
 META_LAST_BACKUP = "cadangan_terakhir"
 
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 REPOSITORY_URL = "https://github.com/aksara26/IslamicHabits"

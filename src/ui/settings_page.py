@@ -167,7 +167,14 @@ class SettingsPage(Gtk.Box):
             title="Data",
             description="Data hanya tersimpan di komputer ini. Tidak ada akun atau server.",
         )
-        group.add(self._action_row("Ekspor data", "Simpan salinan JSON lengkap", "Ekspor", self._on_export))
+        group.add(
+            self._action_row(
+                "Ekspor data",
+                "Simpan salinan JSON lengkap ibadah, kebiasaan, dan catatan",
+                "Ekspor",
+                self._on_export,
+            )
+        )
         group.add(
             self._action_row("Impor data", "Gabungkan atau timpa dengan berkas JSON", "Impor", self._on_import)
         )
@@ -203,7 +210,7 @@ class SettingsPage(Gtk.Box):
 
         delete_row = Adw.ActionRow(
             title="Hapus semua data",
-            subtitle="Kembalikan ke ibadah bawaan; tidak bisa diurungkan",
+            subtitle="Kembalikan ke ibadah dan kebiasaan bawaan; tidak bisa diurungkan",
         )
         delete_button = Gtk.Button(label="Hapus semua")
         delete_button.add_css_class("destructive-action")
@@ -364,8 +371,8 @@ class SettingsPage(Gtk.Box):
             return
 
         details = (
-            f"Berkas berisi {preview.counts['ibadah']} ibadah, "
-            f"{preview.counts['catatan']} catatan ibadah, "
+            f"Berkas berisi {preview.counts['ibadah']} kegiatan, "
+            f"{preview.counts['catatan']} catatan kegiatan, "
             f"{preview.counts['catatan_harian']} catatan harian, dan "
             f"{preview.counts['muhasabah']} muhasabah.\n\n"
             f"Baris baru: {preview.total_new}. "
@@ -408,8 +415,9 @@ class SettingsPage(Gtk.Box):
         dialog = Adw.AlertDialog(
             heading="Hapus semua data?",
             body=(
-                "Seluruh ibadah, catatan ibadah, catatan harian, muhasabah, dan "
-                "pengaturan akan dihapus, lalu ibadah bawaan dikembalikan. "
+                "Seluruh ibadah, kebiasaan, catatan kegiatan, catatan harian, "
+                "muhasabah, dan pengaturan akan dihapus, lalu data bawaan "
+                "dikembalikan. "
                 "Buat cadangan dulu bila perlu."
             ),
         )
@@ -426,7 +434,9 @@ class SettingsPage(Gtk.Box):
             return
         self._repo.clear_all_data()
         self._on_data_changed()
-        self._on_toast("Data dihapus dan ibadah bawaan dikembalikan", None, None)
+        self._on_toast(
+            "Data dihapus dan ibadah serta kebiasaan bawaan dikembalikan", None, None
+        )
 
     # -- tentang ---------------------------------------------------------
 
@@ -439,7 +449,7 @@ class SettingsPage(Gtk.Box):
             license=LICENSE,
             website=REPOSITORY_URL,
             comments=(
-                "Catatan ibadah harian yang privat dan lokal. "
+                "Catatan ibadah dan kebiasaan harian yang privat dan lokal. "
                 "Tidak ada akun, tidak ada server."
             ),
         )

@@ -14,6 +14,7 @@ from .statistics import EntryKind
 __all__ = [
     "DEFAULT_CATEGORIES",
     "DEFAULT_WORSHIPS",
+    "HABIT_CATEGORY",
     "DefaultWorship",
 ]
 
@@ -34,8 +35,11 @@ DEFAULT_CATEGORIES: tuple[str, ...] = (
     "Dzikir",
     "Puasa sunnah",
     "Amal",
+    "Kebiasaan",
     "Pribadi",
 )
+
+HABIT_CATEGORY = "Kebiasaan"
 
 # 0 = Senin ... 6 = Minggu, mengikuti numbering Python.
 SENIN_KAMIS = (0, 3)
@@ -59,4 +63,11 @@ DEFAULT_WORSHIPS: tuple[DefaultWorship, ...] = (
     DefaultWorship("Puasa Senin-Kamis", "Puasa sunnah", EntryKind.CHECK, weekdays=SENIN_KAMIS),
     DefaultWorship("Sedekah", "Amal", EntryKind.CHECK),
     DefaultWorship("Silaturahmi", "Amal", EntryKind.CHECK),
+    # Kebiasaan umum memakai sistem yang sama dengan ibadah, sehingga masuk
+    # statistik harian, bulanan, dan tahunan tanpa jalur data terpisah.
+    DefaultWorship("Belajar", HABIT_CATEGORY, EntryKind.NUMBER, 30, "menit"),
+    DefaultWorship("Baca buku", HABIT_CATEGORY, EntryKind.NUMBER, 10, "halaman"),
+    DefaultWorship("Olahraga", HABIT_CATEGORY, EntryKind.CHECK),
+    DefaultWorship("Jalan kaki", HABIT_CATEGORY, EntryKind.NUMBER, 20, "menit"),
+    DefaultWorship("Tidur awal", HABIT_CATEGORY, EntryKind.CHECK),
 )
